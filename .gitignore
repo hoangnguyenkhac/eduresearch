@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 scratch/
 backend/*.sqlite
+backend/uploads/*
+!backend/uploads/.gitkeep

@@ -123,7 +123,7 @@ const _DEFAULT_QUALITATIVE_COMMENTS = [
 
 const Analytics = () => {
   const { currentUser } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const querySurveyId = searchParams.get('surveyId');
 
   const [surveys, setSurveys] = useState([]);
@@ -524,7 +524,11 @@ tr:last-child td { border-bottom: 2pt solid #000; }
             <select 
               className="input" 
               value={selectedSurveyId} 
-              onChange={(e) => setSelectedSurveyId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedSurveyId(val);
+                setSearchParams({ surveyId: val });
+              }}
               style={{ backgroundColor: '#F9FAFB' }}
             >
               {surveys.length === 0 ? (

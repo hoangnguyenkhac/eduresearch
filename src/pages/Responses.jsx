@@ -450,7 +450,11 @@ const Responses = () => {
               <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '420px' }}>
                 Khảo sát này chưa có phiếu trả lời nào. Bạn có thể mở biểu mẫu trực tuyến để điền thử nghiệm hoặc chia sẻ đường dẫn cho đối tượng nghiên cứu.
               </p>
-              <Link to="/survey/1" className="btn btn-primary" target="_blank">
+              <Link 
+                to={`/survey/${selectedSurveyId || (surveys[0]?.id || 1)}`} 
+                className="btn btn-primary" 
+                target="_blank"
+              >
                 <ExternalLink size={16} />
                 Mở khảo sát trực tuyến
               </Link>
@@ -831,6 +835,25 @@ const Responses = () => {
                     <Download size={14} /> Tải file mẫu .csv
                   </button>
                 </div>
+              </div>
+
+              {/* CHỌN KHẢO SÁT NHẬN DỮ LIỆU */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  Khảo sát nhận dữ liệu phản hồi:
+                </label>
+                <select 
+                  className="input" 
+                  value={selectedSurveyId || (surveys[0]?.id ? surveys[0].id.toString() : '')} 
+                  onChange={(e) => setSelectedSurveyId(e.target.value)}
+                  style={{ backgroundColor: '#F9FAFB', fontWeight: '600', color: 'var(--primary)' }}
+                >
+                  {surveys.map(s => (
+                    <option key={s.id} value={s.id.toString()}>
+                      #{s.id} - {s.title} ({s.responses_count} phản hồi hiện tại)
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* KHUNG TẢI FILE */}

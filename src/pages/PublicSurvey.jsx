@@ -155,8 +155,8 @@ const PublicSurvey = () => {
     );
   }
 
-  // Khảo sát đã đóng
-  if (surveyInfo?.status === 'Closed') {
+  // Khảo sát đã đóng (trừ trường hợp xem trước ?preview=true)
+  if (surveyInfo?.status === 'Closed' && !isPreview) {
     return (
       <div style={{ animation: 'fadeIn 0.5s ease', textAlign: 'center', padding: '3rem 1rem' }}>
         <div className="card" style={{ maxWidth: '540px', margin: '0 auto', padding: '3rem 2rem' }}>

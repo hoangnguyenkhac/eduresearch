@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
-import { AlertTriangle, CheckCircle, FileDown, ChevronRight, ChevronDown, FileText, Trash2, Edit, Play, CheckCircle2, Layers, BarChart3, HelpCircle, MessageSquare, Tag, Quote, Search, Filter, ThumbsUp, TrendingUp, Sparkles, User } from 'lucide-react';
+import { AlertTriangle, FileDown, ChevronRight, ChevronDown, FileText, Trash2, Edit, Play, CheckCircle2, Layers, BarChart3, MessageSquare, Tag, Search, ThumbsUp, TrendingUp, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { surveysAPI, responsesAPI } from '../services/api';
 import Toast from '../components/Toast';
@@ -58,7 +58,7 @@ const SENTIMENT_PIE_DATA = [
 ];
 
 // Ý kiến định tính học thuật mẫu
-const DEFAULT_QUALITATIVE_COMMENTS = [
+const _DEFAULT_QUALITATIVE_COMMENTS = [
   {
     id: 'c1',
     role: 'Giảng viên',
@@ -810,6 +810,13 @@ tr:last-child td { border-bottom: 2pt solid #000; }
       )}
 
       {/* TAB 5: PHÂN TÍCH ĐỊNH TÍNH & KHẢO SÁT TEXT */}
+      {hasResponses && textResponses.length === 0 && activeTab === 'qualitative' && (
+        <div className="card" style={{ marginBottom: '2rem', textAlign: 'center', padding: '2.5rem 1.5rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Chưa có ý kiến định tính</h3>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Bảng hỏi này chưa ghi nhận các phản hồi câu hỏi tự luận mở (rào cản, kiến nghị). Hãy thu thập thêm các ý kiến nhận xét dạng văn bản để hệ thống phân tích cảm xúc và tạo Word Cloud.</p>
+        </div>
+      )}
+
       {hasResponses && textResponses.length > 0 && activeTab === 'qualitative' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
           {/* 4 THẺ CHỈ SỐ KPI ĐỊNH TÍNH */}

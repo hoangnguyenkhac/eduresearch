@@ -24,23 +24,42 @@ exports.getDashboardData = (req, res) => {
           ];
         }
 
-        const areaData = [
-          { name: 'T1', value: Math.min(totalResponses, 5) },
-          { name: 'T2', value: Math.min(totalResponses, 15) },
-          { name: 'T3', value: Math.min(totalResponses, 30) },
-          { name: 'T4', value: Math.min(totalResponses, 50) },
-          { name: 'T5', value: Math.min(totalResponses, 80) },
-          { name: 'T6', value: Math.min(totalResponses, 120) },
-          { name: 'T7', value: totalResponses }
-        ];
+        db.all(`SELECT date, count(id) as count FROM responses GROUP BY date`, [], (dateErr, dateRows) => {
+          const dateMap = {};
+          if (dateRows) {
+            dateRows.forEach(r => {
+              if (r.date) dateMap[r.date] = r.count;
+            });
+          }
 
-        res.json({
-          totalSurveys,
-          totalResponses,
-          validResponses,
-          totalAnalysis: totalSurveys > 0 ? 3 : 0,
-          areaData,
-          pieData
+          // Tạo danh sách 7 ngày gần nhất để biểu đồ so sánh xu hướng theo ngày thực tế
+          const areaData = [];
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+
+            const keyStandard = `${day}/${month}/${d.getFullYear()}`;
+            const keyPadded = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${d.getFullYear()}`;
+
+            const count = dateMap[keyStandard] || dateMap[keyPadded] || 0;
+            const label = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+
+            areaData.push({
+              name: label,
+              value: count
+            });
+          }
+
+          res.json({
+            totalSurveys,
+            totalResponses,
+            validResponses,
+            totalAnalysis: totalSurveys > 0 ? 3 : 0,
+            areaData,
+            pieData
+          });
         });
       });
     });

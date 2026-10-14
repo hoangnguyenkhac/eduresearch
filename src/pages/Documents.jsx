@@ -100,7 +100,9 @@ const Documents = () => {
       return;
     }
     showToast(`Bắt đầu tải xuống: ${doc.title}`);
-    const downloadUrl = `http://localhost:5000/uploads/${doc.file_path}`;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const serverOrigin = apiBase.startsWith('http') ? apiBase.replace(/\/api\/?$/, '') : window.location.origin;
+    const downloadUrl = `${serverOrigin}/uploads/${doc.file_path}`;
     const element = document.createElement('a');
     element.href = downloadUrl;
     element.download = doc.original_name || doc.title;

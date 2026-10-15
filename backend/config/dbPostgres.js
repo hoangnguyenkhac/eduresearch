@@ -6,18 +6,33 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const isProduction = process.env.NODE_ENV === 'production';
+const isRemoteDb = !!process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: isRemoteDb || isProduction ? { rejectUnauthorized: false } : false,
   max: parseInt(process.env.PG_POOL_MAX || '10', 10),
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
 });
 
 pool.on('error', (err) => {
   console.error('[PG POOL ERROR]', err.message, err.stack);
 });
+
+// Kiểm tra kết nối DB ngay khi khởi động để log rõ ràng trên Render
+if (process.env.DATABASE_URL) {
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.error('❌ [DATABASE CONNECTION ERROR]:', err.message);
+    } else {
+      console.log('✅ [DATABASE CONNECTED]: Successfully connected to PostgreSQL (Supabase)!');
+      release();
+    }
+  });
+} else {
+  console.error('❌ [DATABASE WARNING]: DATABASE_URL is not defined in environment variables!');
+}
 
 /**
  * Execute a query with parameters

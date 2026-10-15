@@ -128,10 +128,7 @@ CREATE TRIGGER update_surveys_updated_at
   BEFORE UPDATE ON surveys
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 8. Seed initial admin (only if table empty)
+-- 8. Seed initial admin (default password: 'admin')
 INSERT INTO users (name, email, password, role, unit)
-SELECT 'Admin Tối Cao', 'admin@eduresearch.com', $1, 'admin', 'Ban Giám Đốc'
+SELECT 'Admin Tối Cao', 'admin@eduresearch.com', '$2b$12$s5Q7J9kjSzvGIx.Wd51/j.zpW6uOTUkCieypFvSSNdP5flnc6JSRu', 'admin', 'Ban Giám Đốc'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@eduresearch.com');
-
--- Note: Replace $1 with bcrypt hash of ADMIN_INITIAL_PASSWORD when running migration
--- Example: INSERT ... VALUES (..., '$2b$12$...', ...)

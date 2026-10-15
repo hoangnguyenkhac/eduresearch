@@ -26,25 +26,31 @@ const authenticateToken = (req, res, next) => {
     if (err) return res.status(403).json({ error: 'Token không hợp lệ hoặc đã hết hạn.' });
 
     // Kiểm tra tính hợp lệ của phiên đăng nhập qua token_version (H5)
-    const db = require('../config/db');
-    db.get('SELECT id, role, token_version FROM users WHERE id = ?', [user.id], (dbErr, dbUser) => {
-      if (dbErr || !dbUser) {
-        return res.status(401).json({ error: 'Tài khoản không tồn tại hoặc đã bị khóa.' });
-      }
-      
-      const currentVersion = dbUser.token_version || 0;
-      const tokenVersion = user.tokenVersion || 0;
-      
-      if (tokenVersion < currentVersion) {
-        return res.status(401).json({ error: 'Phiên đăng nhập đã bị thu hồi do đổi mật khẩu. Vui lòng đăng nhập lại.' });
-      }
+    const { query } = require('../config/dbPostgres');
+    query('SELECT id, role, token_version FROM users WHERE id = $1', [user.id])
+      .then(({ rows }) => {
+        const dbUser = rows[0];
+        if (!dbUser) {
+          return res.status(401).json({ error: 'Tài khoản không tồn tại hoặc đã bị khóa.' });
+        }
+        
+        const currentVersion = dbUser.token_version || 0;
+        const tokenVersion = user.tokenVersion || 0;
+        
+        if (tokenVersion < currentVersion) {
+          return res.status(401).json({ error: 'Phiên đăng nhập đã bị thu hồi do đổi mật khẩu. Vui lòng đăng nhập lại.' });
+        }
 
-      req.user = {
-        ...user,
-        role: dbUser.role // Luôn dùng role mới nhất từ CSDL
-      };
-      next();
-    });
+        req.user = {
+          ...user,
+          role: dbUser.role // Luôn dùng role mới nhất từ CSDL
+        };
+        next();
+      })
+      .catch((dbErr) => {
+        console.error('[AUTH DB ERROR]', dbErr);
+        return res.status(500).json({ error: 'Lỗi xác thực người dùng.' });
+      });
   });
 };
 

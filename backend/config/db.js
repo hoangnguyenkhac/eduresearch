@@ -73,6 +73,19 @@ function initDatabase() {
     db.run(`ALTER TABLE documents ADD COLUMN file_path TEXT`, () => {});
     db.run(`ALTER TABLE documents ADD COLUMN original_name TEXT`, () => {});
 
+    // Migration thêm token_version cho users để thu hồi token khi đổi mật khẩu (H5)
+    db.run(`ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 0`, () => {});
+
+    // 5. Password Resets Table (H6)
+    db.run(`CREATE TABLE IF NOT EXISTS password_resets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token_hash TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     seedData();
   });
 }

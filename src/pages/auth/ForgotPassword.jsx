@@ -14,7 +14,11 @@ const ForgotPassword = () => {
 
     try {
       const data = await authAPI.forgotPassword(email);
-      setStatus({ type: 'success', message: data.message });
+      setStatus({ 
+        type: 'success', 
+        message: data.message,
+        resetToken: data.resetToken 
+      });
       setEmail('');
     } catch (err) {
       setStatus({ type: 'error', message: err.message });
@@ -39,7 +43,17 @@ const ForgotPassword = () => {
           marginBottom: '1rem', 
           fontSize: '0.875rem' 
         }}>
-          {status.message}
+          <div>{status.message}</div>
+          {status.resetToken && (
+            <div style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid #A7F3D0' }}>
+              <Link 
+                to={`/reset-password?token=${status.resetToken}`} 
+                style={{ color: '#047857', fontWeight: '600', textDecoration: 'underline' }}
+              >
+                👉 Đặt lại mật khẩu ngay (Môi trường Thử nghiệm)
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

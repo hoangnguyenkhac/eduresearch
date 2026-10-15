@@ -135,9 +135,10 @@ exports.changePassword = (req, res) => {
     const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(newPassword, salt);
 
-    db.run(`UPDATE users SET password = ? WHERE id = ?`, [hash, userId], function(updateErr) {
+    // Tăng token_version để vô hiệu hóa toàn bộ phiên đăng nhập cũ trên các thiết bị khác (H5)
+    db.run(`UPDATE users SET password = ?, token_version = COALESCE(token_version, 0) + 1 WHERE id = ?`, [hash, userId], function(updateErr) {
       if (updateErr) return res.status(500).json({ error: updateErr.message });
-      res.json({ message: 'Đổi mật khẩu thành công!' });
+      res.json({ message: 'Đổi mật khẩu thành công! Các phiên đăng nhập trên thiết bị khác đã được thu hồi an toàn.' });
     });
   });
 };

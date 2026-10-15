@@ -44,18 +44,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
-  const switchRole = (role) => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, role });
-    }
-  };
-
   const updateCurrentUser = (userData) => {
     setCurrentUser(prev => ({ ...prev, ...userData }));
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, token, login, logout, switchRole, updateCurrentUser, loading }}>
+    <AuthContext.Provider value={{ currentUser, token, login, logout, updateCurrentUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

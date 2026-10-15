@@ -83,6 +83,8 @@ app.use('/api/responses', responseRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/users', userRoutes);
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
+
+module.exports = app;

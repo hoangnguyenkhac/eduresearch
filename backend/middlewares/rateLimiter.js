@@ -25,7 +25,7 @@ const authLimiter = rateLimit({
 // 3. Tầng thao tác bảo mật cao: Forgot password, Change password
 const sensitiveAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 5, // Tối đa 5 lần thử / 15 phút / IP
+  max: 10, // Tối đa 10 lần thử / 15 phút / IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Quá nhiều lần yêu cầu đổi/khôi phục mật khẩu. Vui lòng thử lại sau 15 phút.' },

@@ -105,8 +105,10 @@ const handleUpload = (req, res, next) => {
  *       201:
  *         description: Thêm tài liệu thành công
  */
+const { bulkOperationsLimiter } = require('../middlewares/rateLimiter');
+
 router.get('/', authenticateToken, documentController.getDocuments);
-router.post('/', authenticateToken, handleUpload, documentController.createDocument);
+router.post('/', authenticateToken, bulkOperationsLimiter, handleUpload, documentController.createDocument);
 router.get('/:id/download', authenticateToken, documentController.downloadDocument);
 router.delete('/:id', authenticateToken, documentController.deleteDocument);
 

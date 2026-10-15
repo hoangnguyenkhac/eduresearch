@@ -3,7 +3,9 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { authenticateToken } = require('../middlewares/auth');
 
-router.post('/register', authController.register);
+const { authLimiter, sensitiveAuthLimiter } = require('../middlewares/rateLimiter');
+
+router.post('/register', authLimiter, authController.register);
 /**
  * @swagger
  * /api/auth/login:
@@ -25,7 +27,7 @@ router.post('/register', authController.register);
  *       200:
  *         description: Đăng nhập thành công
  */
-router.post('/login', authController.login);
+router.post('/login', authLimiter, authController.login);
 
 /**
  * @swagger
@@ -43,7 +45,7 @@ const userController = require('../controllers/userController');
 
 router.get('/me', authenticateToken, authController.getMe);
 router.put('/profile', authenticateToken, userController.updateProfile);
-router.post('/change-password', authenticateToken, userController.changePassword);
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/change-password', authenticateToken, sensitiveAuthLimiter, userController.changePassword);
+router.post('/forgot-password', sensitiveAuthLimiter, authController.forgotPassword);
 
 module.exports = router;

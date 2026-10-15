@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 
@@ -23,6 +22,16 @@ if (process.env.FRONTEND_URL) {
   console.warn('[SECURITY WARNING] FRONTEND_URL is not configured in production environment.');
 }
 
+const helmet = require('helmet');
+const { globalLimiter } = require('./middlewares/rateLimiter');
+const { sanitizeMiddleware } = require('./middlewares/sanitize');
+
+// Bảo mật HTTP Headers với Helmet (M3)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Cho phép API hoạt động độc lập và phục vụ Swagger/Vite
+}));
+
 app.use(cors({
   origin: (origin, callback) => {
     // Cho phép request không có origin (mobile apps, curl, Postman)
@@ -33,16 +42,15 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+// Giới hạn kích thước payload JSON và form body tránh DoS (L3)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiter cho login — tối đa 10 lần thử / 15 phút / IP
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Quá nhiều lần thử đăng nhập. Vui lòng thử lại sau 15 phút.' },
-});
+// Middleware làm sạch dữ liệu đầu vào chống Stored & Reflected XSS (M4)
+app.use(sanitizeMiddleware);
+
+// Tầng Rate Limiter toàn cục cho mọi API (H4)
+app.use('/api', globalLimiter);
 
 const path = require('path');
 const { authenticateToken } = require('./middlewares/auth');
@@ -68,7 +76,6 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'EduResearch API is running' });
 });
 
-app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/surveys', surveyRoutes);

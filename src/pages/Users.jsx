@@ -4,11 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { usersAPI } from '../services/api';
 import Toast from '../components/Toast';
+import { Skeleton, SkeletonTableRows } from '../components/Skeleton';
+
+let cachedUsers = null;
 
 const Users = () => {
   const { currentUser } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState(cachedUsers || []);
+  const [loading, setLoading] = useState(!cachedUsers);
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -37,21 +40,22 @@ const Users = () => {
     return <Navigate to="/" replace />;
   }
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const result = await usersAPI.getAll();
       setUsers(result);
+      cachedUsers = result;
     } catch (error) {
       console.error('Error fetching users:', error);
-      showToast('Không thể tải danh sách người dùng', 'error');
+      if (!silent) showToast('Không thể tải danh sách người dùng', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(!!cachedUsers);
   }, []);
 
   const handleOpenCreate = () => {
@@ -136,14 +140,6 @@ const Users = () => {
   const researcherCount = users.filter(u => u.role === 'researcher').length;
   const viewerCount = users.filter(u => u.role === 'viewer').length;
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Đang tải danh sách người dùng...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
@@ -165,9 +161,13 @@ const Users = () => {
             <div style={{ padding: '0.75rem', backgroundColor: '#FEE2E2', borderRadius: 'var(--radius-md)', color: '#EF4444' }}>
               <ShieldAlert size={24} />
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Quản trị viên</div>
-              <div style={{ fontSize: '1.875rem', fontWeight: 'bold' }}>{adminCount}</div>
+              {loading && users.length === 0 ? (
+                <Skeleton width="45px" height="2rem" style={{ marginTop: '0.25rem' }} />
+              ) : (
+                <div style={{ fontSize: '1.875rem', fontWeight: 'bold' }}>{adminCount}</div>
+              )}
             </div>
           </div>
         </div>
@@ -177,9 +177,13 @@ const Users = () => {
             <div style={{ padding: '0.75rem', backgroundColor: '#EFF6FF', borderRadius: 'var(--radius-md)', color: '#3B82F6' }}>
               <ShieldCheck size={24} />
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Nhà nghiên cứu</div>
-              <div style={{ fontSize: '1.875rem', fontWeight: 'bold' }}>{researcherCount}</div>
+              {loading && users.length === 0 ? (
+                <Skeleton width="45px" height="2rem" style={{ marginTop: '0.25rem' }} />
+              ) : (
+                <div style={{ fontSize: '1.875rem', fontWeight: 'bold' }}>{researcherCount}</div>
+              )}
             </div>
           </div>
         </div>
@@ -189,9 +193,13 @@ const Users = () => {
             <div style={{ padding: '0.75rem', backgroundColor: '#F3F4F6', borderRadius: 'var(--radius-md)', color: '#4B5563' }}>
               <Shield size={24} />
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Người xem</div>
-              <div style={{ fontSize: '1.875rem', fontWeight: 'bold' }}>{viewerCount}</div>
+              {loading && users.length === 0 ? (
+                <Skeleton width="45px" height="2rem" style={{ marginTop: '0.25rem' }} />
+              ) : (
+                <div style={{ fontSize: '1.875rem', fontWeight: 'bold' }}>{viewerCount}</div>
+              )}
             </div>
           </div>
         </div>
@@ -210,7 +218,10 @@ const Users = () => {
                 <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
-            <tbody>
+            {loading && users.length === 0 ? (
+              <SkeletonTableRows columns={6} rows={5} />
+            ) : (
+              <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
                   <td>
@@ -256,7 +267,8 @@ const Users = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          )}
+        </table>
         </div>
       </div>
 

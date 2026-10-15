@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { surveysAPI } from '../services/api';
 import Toast from '../components/Toast';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 // Ngân hàng câu hỏi chuẩn hóa theo từng biến nghiên cứu
 const SAMPLE_QUESTIONS = {
@@ -34,11 +35,13 @@ const SAMPLE_QUESTIONS = {
   ]
 };
 
+let cachedSurveys = null;
+
 const Surveys = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [surveys, setSurveys] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [surveys, setSurveys] = useState(cachedSurveys || []);
+  const [loading, setLoading] = useState(!cachedSurveys);
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -78,21 +81,22 @@ const Surveys = () => {
     setTimeout(() => setToast({ message: '', type: 'success' }), 3000);
   };
 
-  const fetchSurveys = async () => {
+  const fetchSurveys = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const result = await surveysAPI.getAll();
       setSurveys(result);
+      cachedSurveys = result;
     } catch (error) {
       console.error('Error fetching surveys:', error);
-      showToast('Không thể tải danh sách khảo sát', 'error');
+      if (!silent) showToast('Không thể tải danh sách khảo sát', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSurveys();
+    fetchSurveys(!!cachedSurveys);
   }, []);
 
   const handleOpenCreate = () => {
@@ -373,14 +377,6 @@ const Surveys = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Đang tải danh sách bảng hỏi...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
@@ -398,7 +394,26 @@ const Surveys = () => {
         )}
       </div>
 
-      {surveys.length === 0 ? (
+      {loading && (!surveys || surveys.length === 0) ? (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-container">
+            <table className="table">
+              <thead style={{ backgroundColor: '#F9FAFB' }}>
+                <tr>
+                  <th>Tiêu đề &amp; Cấu trúc</th>
+                  <th>Trạng thái (Click đổi)</th>
+                  <th>Thang đo</th>
+                  <th>Phản hồi / Mục tiêu</th>
+                  <th>Biến nghiên cứu</th>
+                  <th>Ngày tạo</th>
+                  <th style={{ textAlign: 'right' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <SkeletonTableRows columns={7} rows={5} />
+            </table>
+          </div>
+        </div>
+      ) : surveys.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <FileSpreadsheet size={28} />

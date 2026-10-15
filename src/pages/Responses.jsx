@@ -5,8 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { responsesAPI, surveysAPI } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import Toast from '../components/Toast';
+import { SkeletonStatCard, SkeletonChart, SkeletonTableRows } from '../components/Skeleton';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6B7280'];
+
+const cachedResponsesMap = new Map();
 
 const Responses = () => {
   const { currentUser } = useAuth();
@@ -55,21 +58,32 @@ const Responses = () => {
   }, []);
 
   // Fetch responses when selected survey changes
-  const fetchResponses = async () => {
+  const fetchResponses = async (silent = false) => {
+    if (!selectedSurveyId) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const result = await responsesAPI.getBySurvey(selectedSurveyId);
       setData(result);
+      cachedResponsesMap.set(selectedSurveyId, result);
     } catch (error) {
       console.error('Error fetching responses:', error);
-      showToast('Không thể tải dữ liệu phản hồi', 'error');
+      if (!silent) showToast('Không thể tải dữ liệu phản hồi', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchResponses();
+    if (selectedSurveyId) {
+      const cached = cachedResponsesMap.get(selectedSurveyId);
+      if (cached) {
+        setData(cached);
+        setLoading(false);
+        fetchResponses(true);
+      } else {
+        fetchResponses(false);
+      }
+    }
   }, [selectedSurveyId]);
 
   const handleDeleteResponse = async (id) => {
@@ -362,10 +376,38 @@ const Responses = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-          <div style={{ color: 'var(--text-muted)' }}>Đang tải dữ liệu phản hồi...</div>
-        </div>
+      {loading && data.list.length === 0 ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem', marginBottom: '2rem' }}>
+            <SkeletonChart height="240px" />
+            <SkeletonChart height="240px" />
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-container">
+              <table className="table" style={{ fontSize: '0.875rem' }}>
+                <thead style={{ backgroundColor: '#F9FAFB' }}>
+                  <tr>
+                    <th style={{ width: '40px', textAlign: 'center' }} />
+                    <th style={{ width: '60px' }}>Mã #</th>
+                    <th>Đối tượng</th>
+                    <th>Đơn vị</th>
+                    <th>Giới tính</th>
+                    <th>Thời gian hoàn thành</th>
+                    <th>Ngày gửi</th>
+                    <th>Trạng thái</th>
+                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <SkeletonTableRows columns={9} rows={5} />
+              </table>
+            </div>
+          </div>
+        </>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>

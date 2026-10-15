@@ -4,33 +4,39 @@ import { useAuth } from '../context/AuthContext';
 import { dashboardAPI } from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { ClipboardList, MessageSquare, CheckCircle, BarChart2, Clock, Plus, ArrowRight } from 'lucide-react';
+import { Skeleton, SkeletonStatCard, SkeletonChart } from '../components/Skeleton';
 
 const COLORS = ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'];
 
+let cachedDashboardData = null;
+
 const Dashboard = () => {
   const { currentUser } = useAuth();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(cachedDashboardData);
+  const [loading, setLoading] = useState(!cachedDashboardData);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchData = async () => {
       try {
         const result = await dashboardAPI.getStats();
-        setData(result);
+        if (isMounted) {
+          setData(result);
+          cachedDashboardData = result;
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     fetchData();
+    return () => { isMounted = false; };
   }, []);
 
-  if (loading || !data) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>Đang tải dữ liệu tổng quan...</div>;
-  }
-
-  const validRatio = data.totalResponses > 0 ? Math.round((data.validResponses / data.totalResponses) * 100) : 0;
+  const validRatio = data?.totalResponses > 0 ? Math.round((data.validResponses / data.totalResponses) * 100) : 0;
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease' }}>
@@ -51,125 +57,162 @@ const Dashboard = () => {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-        <Link to="/surveys" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#EFF6FF', borderRadius: 'var(--radius-lg)', color: '#3B82F6' }}>
-            <ClipboardList size={32} />
-          </div>
-          <div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data.totalSurveys}</div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Bảng hỏi đã tạo</div>
-          </div>
-        </Link>
-        <Link to="/responses" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#F3E8FF', borderRadius: 'var(--radius-lg)', color: '#8B5CF6' }}>
-            <MessageSquare size={32} />
-          </div>
-          <div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data.totalResponses}</div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Tổng phản hồi</div>
-          </div>
-        </Link>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#D1FAE5', borderRadius: 'var(--radius-lg)', color: '#10B981' }}>
-            <CheckCircle size={32} />
-          </div>
-          <div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data.validResponses}</div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Hợp lệ (~{validRatio}%)</div>
-          </div>
+      {loading && !data ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
         </div>
-        <Link to="/analytics" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#FEF3C7', borderRadius: 'var(--radius-lg)', color: '#F59E0B' }}>
-            <BarChart2 size={32} />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+          <Link to="/surveys" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#EFF6FF', borderRadius: 'var(--radius-lg)', color: '#3B82F6' }}>
+              <ClipboardList size={32} />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data?.totalSurveys ?? 0}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Bảng hỏi đã tạo</div>
+            </div>
+          </Link>
+          <Link to="/responses" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#F3E8FF', borderRadius: 'var(--radius-lg)', color: '#8B5CF6' }}>
+              <MessageSquare size={32} />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data?.totalResponses ?? 0}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Tổng phản hồi</div>
+            </div>
+          </Link>
+          <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#D1FAE5', borderRadius: 'var(--radius-lg)', color: '#10B981' }}>
+              <CheckCircle size={32} />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data?.validResponses ?? 0}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Hợp lệ (~{validRatio}%)</div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data.totalAnalysis}</div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Phân tích thống kê</div>
-          </div>
-        </Link>
-      </div>
+          <Link to="/analytics" className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#FEF3C7', borderRadius: 'var(--radius-lg)', color: '#F59E0B' }}>
+              <BarChart2 size={32} />
+            </div>
+            <div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{data?.totalAnalysis ?? 0}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Phân tích thống kê</div>
+            </div>
+          </Link>
+        </div>
+      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Xu hướng thu thập dữ liệu</h3>
-            <span className="badge badge-info">Thời gian thực</span>
-          </div>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.areaData}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} dx={-10} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                />
-                <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+      {loading && !data ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+          <SkeletonChart height="300px" />
+          <SkeletonChart height="300px" />
         </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Xu hướng thu thập dữ liệu</h3>
+              <span className="badge badge-info">Thời gian thực</span>
+            </div>
+            <div style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data?.areaData || []}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280'}} dx={-10} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-        <div className="card">
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Đối tượng khảo sát</h3>
-          <div style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.pieData}
-                  cx="50%"
-                  cy="45%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {data.pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="card">
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Đối tượng khảo sát</h3>
+            <div style={{ height: '300px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={data?.pieData || []}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {(data?.pieData || []).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div className="card">
           <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Tiến độ thu mẫu nghiên cứu</h3>
           
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: '500' }}>Khảo sát chính thức</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
-                {data.totalResponses}/200 ({Math.min(100, Math.round((data.totalResponses / 200) * 100))}%)
-              </span>
+          {loading && !data ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <Skeleton width="140px" height="1rem" />
+                  <Skeleton width="80px" height="1rem" />
+                </div>
+                <Skeleton width="100%" height="8px" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <Skeleton width="160px" height="1rem" />
+                  <Skeleton width="80px" height="1rem" />
+                </div>
+                <Skeleton width="100%" height="8px" />
+              </div>
             </div>
-            <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(100, Math.round((data.totalResponses / 200) * 100))}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px' }}></div>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: '500' }}>Khảo sát chính thức</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
+                    {data?.totalResponses || 0}/200 ({Math.min(100, Math.round(((data?.totalResponses || 0) / 200) * 100))}%)
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, Math.round(((data?.totalResponses || 0) / 200) * 100))}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px' }}></div>
+                </div>
+              </div>
 
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ fontWeight: '500' }}>Mục tiêu tối thiểu Pilot test</span>
-              <span style={{ fontWeight: 'bold', color: 'var(--secondary)' }}>
-                {Math.min(30, data.totalResponses)}/30 ({Math.min(100, Math.round((Math.min(30, data.totalResponses) / 30) * 100))}%)
-              </span>
-            </div>
-            <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(100, Math.round((Math.min(30, data.totalResponses) / 30) * 100))}%`, height: '100%', backgroundColor: 'var(--secondary)', borderRadius: '4px' }}></div>
-            </div>
-          </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: '500' }}>Mục tiêu tối thiểu Pilot test</span>
+                  <span style={{ fontWeight: 'bold', color: 'var(--secondary)' }}>
+                    {Math.min(30, data?.totalResponses || 0)}/30 ({Math.min(100, Math.round((Math.min(30, data?.totalResponses || 0) / 30) * 100))}%)
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(100, Math.round((Math.min(30, data?.totalResponses || 0) / 30) * 100))}%`, height: '100%', backgroundColor: 'var(--secondary)', borderRadius: '4px' }}></div>
+                </div>
+              </div>
+            </>
+          )}
           
           <div style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             * Khuyến nghị: Cần tối thiểu 100-200 mẫu hợp lệ để chạy phân tích hồi quy &amp; SEM.

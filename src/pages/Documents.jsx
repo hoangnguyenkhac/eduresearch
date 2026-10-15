@@ -3,11 +3,14 @@ import { Search, Upload, FileText, Trash2, X, Download, FolderOpen, AlertTriangl
 import { useAuth } from '../context/AuthContext';
 import { documentsAPI } from '../services/api';
 import Toast from '../components/Toast';
+import { SkeletonCard } from '../components/Skeleton';
+
+let cachedDocuments = null;
 
 const Documents = () => {
   const { currentUser } = useAuth();
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [documents, setDocuments] = useState(cachedDocuments || []);
+  const [loading, setLoading] = useState(!cachedDocuments);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,21 +34,22 @@ const Documents = () => {
     setTimeout(() => setToast({ message: '', type: 'success' }), 3000);
   };
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const result = await documentsAPI.getAll();
       setDocuments(result);
+      cachedDocuments = result;
     } catch (error) {
       console.error('Error fetching documents:', error);
-      showToast('Không thể tải danh sách tài liệu', 'error');
+      if (!silent) showToast('Không thể tải danh sách tài liệu', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDocuments();
+    fetchDocuments(!!cachedDocuments);
   }, []);
 
   const handleOpenUpload = () => {
@@ -114,14 +118,6 @@ const Documents = () => {
     return matchesQuery && matchesCategory;
   });
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Đang tải kho tài liệu...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
@@ -169,7 +165,16 @@ const Documents = () => {
         </div>
       </div>
 
-      {filteredDocs.length === 0 ? (
+      {loading && documents.length === 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : filteredDocs.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <FolderOpen size={28} />

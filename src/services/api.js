@@ -11,21 +11,35 @@ const getHeaders = () => {
   return headers;
 };
 
-// Generic fetch wrapper
+// Generic fetch wrapper with AbortController timeout (L4)
 const fetchAPI = async (endpoint, options = {}) => {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      ...getHeaders(),
-      ...options.headers,
-    },
-  });
+  const timeoutMs = options.timeout || 15000; // 15 seconds default timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || 'Đã có lỗi xảy ra');
+  try {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: {
+        ...getHeaders(),
+        ...options.headers,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Đã có lỗi xảy ra');
+    }
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Yêu cầu hết thời gian chờ (Request Timeout). Máy chủ đang phản hồi chậm.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data;
 };
 
 // Auth API
@@ -75,35 +89,59 @@ export const documentsAPI = {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${BASE_URL}/documents`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || 'Đã có lỗi xảy ra');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for upload
+    try {
+      const response = await fetch(`${BASE_URL}/documents`, {
+        method: 'POST',
+        headers,
+        body: formData,
+        signal: controller.signal
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Đã có lỗi xảy ra');
+      }
+      return data;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Tải file lên quá thời gian chờ (Upload Timeout).');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return data;
   },
   download: async (id, fileName) => {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${BASE_URL}/documents/${id}/download`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || 'Lỗi khi tải file');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s for download
+    try {
+      const response = await fetch(`${BASE_URL}/documents/${id}/download`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        signal: controller.signal
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Lỗi khi tải file');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'document';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Tải tài liệu quá thời gian chờ (Download Timeout).');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName || 'document';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
   },
   delete: (id) => fetchAPI(`/documents/${id}`, { method: 'DELETE' }),
 };

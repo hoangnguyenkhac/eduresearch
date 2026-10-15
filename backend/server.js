@@ -25,6 +25,7 @@ if (process.env.FRONTEND_URL) {
 const helmet = require('helmet');
 const { globalLimiter } = require('./middlewares/rateLimiter');
 const { sanitizeMiddleware } = require('./middlewares/sanitize');
+const { auditHttpMiddleware } = require('./middlewares/auditLogger');
 
 // Bảo mật HTTP Headers với Helmet (M3)
 app.use(helmet({
@@ -48,6 +49,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Middleware làm sạch dữ liệu đầu vào chống Stored & Reflected XSS (M4)
 app.use(sanitizeMiddleware);
+
+// Middleware ghi nhật ký kiểm toán an ninh (M7)
+app.use(auditHttpMiddleware);
 
 // Tầng Rate Limiter toàn cục cho mọi API (H4)
 app.use('/api', globalLimiter);
@@ -82,6 +86,25 @@ app.use('/api/surveys', surveyRoutes);
 app.use('/api/responses', responseRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/users', userRoutes);
+
+// Centralized Error-handling Middleware (L2)
+app.use((err, req, res, next) => {
+  console.error('[UNHANDLED ERROR LOG]', {
+    timestamp: new Date().toISOString(),
+    path: req.originalUrl,
+    method: req.method,
+    error: err && err.message ? err.message : err,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+  });
+
+  const statusCode = err.status || err.statusCode || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+  const safeMessage = isProd && statusCode === 500
+    ? 'Đã có lỗi xảy ra trên hệ thống. Vui lòng thử lại sau.'
+    : (err.message || 'Đã có lỗi xảy ra.');
+
+  res.status(statusCode).json({ error: safeMessage });
+});
 
 const server = app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);

@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const { query } = require('../config/dbPostgres');
 
 // Câu hỏi mẫu chuẩn hóa theo biến nghiên cứu
 const SAMPLE_QUESTIONS_BY_VAR = {
@@ -28,7 +28,7 @@ const SAMPLE_QUESTIONS_BY_VAR = {
   ]
 };
 
-// Hàm tạo câu hỏi tự động theo danh sách biến (kết hợp cả Likert thang đo và Định tính thu thập text)
+// Hàm tạo câu hỏi tự động theo danh sách biến
 function generateDefaultQuestions(variablesStr) {
   const vars = variablesStr ? variablesStr.split(',').map(v => v.trim()).filter(Boolean) : ['SP', 'LD', 'DX', 'AT'];
   let questions = [];
@@ -44,7 +44,7 @@ function generateDefaultQuestions(variablesStr) {
     }
   });
 
-  // Bổ sung các câu hỏi định tính thu thập ý kiến dạng văn bản (Qualitative text questions)
+  // Bổ sung các câu hỏi định tính thu thập ý kiến dạng văn bản
   questions.push(
     {
       code: 'TXT_BARRIER',
@@ -81,135 +81,118 @@ function generateDefaultHypotheses(variablesStr) {
   }));
 }
 
+// Helper: format survey row
+function formatSurveyRow(row) {
+  let questions = [];
+  try {
+    questions = row.questions ? JSON.parse(row.questions) : generateDefaultQuestions(row.variables);
+  } catch {
+    questions = generateDefaultQuestions(row.variables);
+  }
+  questions = questions.map(q => ({ ...q, type: q.type || 'likert' }));
+
+  let hypotheses = [];
+  try {
+    hypotheses = row.hypotheses ? JSON.parse(row.hypotheses) : generateDefaultHypotheses(row.variables);
+  } catch {
+    hypotheses = generateDefaultHypotheses(row.variables);
+  }
+
+  return {
+    ...row,
+    variables: row.variables ? row.variables.split(',').map(v => v.trim()).filter(Boolean) : [],
+    questions_count: questions.length || row.questions_count || 0,
+    questions,
+    hypotheses
+  };
+}
+
 // Lấy tất cả khảo sát
-exports.getSurveys = (req, res) => {
-  db.all(`SELECT * FROM surveys ORDER BY id DESC`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    const formatted = rows.map(r => {
-      let questions = [];
-      try {
-        questions = r.questions ? JSON.parse(r.questions) : generateDefaultQuestions(r.variables);
-      } catch {
-        questions = generateDefaultQuestions(r.variables);
-      }
-      questions = questions.map(q => ({ ...q, type: q.type || 'likert' }));
-
-      let hypotheses = [];
-      try {
-        hypotheses = r.hypotheses ? JSON.parse(r.hypotheses) : generateDefaultHypotheses(r.variables);
-      } catch {
-        hypotheses = generateDefaultHypotheses(r.variables);
-      }
-
-      return {
-        ...r,
-        variables: r.variables ? r.variables.split(',').map(v => v.trim()).filter(Boolean) : [],
-        questions_count: questions.length || r.questions_count || 0,
-        questions,
-        hypotheses
-      };
-    });
+exports.getSurveys = async (req, res) => {
+  try {
+    const { rows } = await query(`SELECT * FROM surveys ORDER BY created_at DESC`);
+    const formatted = rows.map(formatSurveyRow);
     res.json(formatted);
-  });
+  } catch (err) {
+    console.error('[GET SURVEYS ERROR]', err);
+    res.status(500).json({ error: 'Lỗi truy xuất danh sách khảo sát.' });
+  }
 };
 
 // Lấy chi tiết khảo sát theo ID
-exports.getSurveyById = (req, res) => {
-  const { id } = req.params;
-  db.get(`SELECT * FROM surveys WHERE id = ?`, [id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Không tìm thấy khảo sát' });
+exports.getSurveyById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`SELECT * FROM surveys WHERE id = $1`, [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Không tìm thấy khảo sát' });
 
-    let questions = [];
-    try {
-      questions = row.questions ? JSON.parse(row.questions) : generateDefaultQuestions(row.variables);
-    } catch {
-      questions = generateDefaultQuestions(row.variables);
-    }
-    questions = questions.map(q => ({ ...q, type: q.type || 'likert' }));
-
-    let hypotheses = [];
-    try {
-      hypotheses = row.hypotheses ? JSON.parse(row.hypotheses) : generateDefaultHypotheses(row.variables);
-    } catch {
-      hypotheses = generateDefaultHypotheses(row.variables);
-    }
-
-    res.json({
-      ...row,
-      variables: row.variables ? row.variables.split(',').map(v => v.trim()).filter(Boolean) : [],
-      questions_count: questions.length || row.questions_count || 0,
-      questions,
-      hypotheses
-    });
-  });
+    res.json(formatSurveyRow(rows[0]));
+  } catch (err) {
+    console.error('[GET SURVEY BY ID ERROR]', err);
+    res.status(500).json({ error: 'Lỗi truy xuất khảo sát.' });
+  }
 };
 
 // Tạo khảo sát mới
-exports.createSurvey = (req, res) => {
-  if (req.user && req.user.role === 'viewer') {
-    return res.status(403).json({ error: 'Người xem không có quyền tạo khảo sát.' });
+exports.createSurvey = async (req, res) => {
+  try {
+    if (req.user && req.user.role === 'viewer') {
+      return res.status(403).json({ error: 'Người xem không có quyền tạo khảo sát.' });
+    }
+
+    const { title, status = 'Draft', scale = 'Likert 5', target = 100, variables = '', questions, hypotheses } = req.body;
+    if (!title) return res.status(400).json({ error: 'Tiêu đề khảo sát là bắt buộc.' });
+
+    const varsString = Array.isArray(variables) ? variables.join(',') : variables;
+    const initialQuestions = questions && Array.isArray(questions) && questions.length > 0
+      ? questions
+      : generateDefaultQuestions(varsString);
+
+    const initialHypotheses = hypotheses && Array.isArray(hypotheses) && hypotheses.length > 0
+      ? hypotheses
+      : generateDefaultHypotheses(varsString);
+
+    const questionsCount = initialQuestions.length;
+    const now = new Date();
+    const created_at = now.toISOString();
+
+    const { rows } = await query(
+      `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at)
+       VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        title,
+        questionsCount,
+        status,
+        scale,
+        parseInt(target) || 100,
+        varsString,
+        JSON.stringify(initialQuestions),
+        JSON.stringify(initialHypotheses),
+        created_at
+      ]
+    );
+
+    const survey = formatSurveyRow(rows[0]);
+    res.status(201).json(survey);
+  } catch (err) {
+    console.error('[CREATE SURVEY ERROR]', err);
+    res.status(500).json({ error: 'Lỗi máy chủ khi tạo khảo sát.' });
   }
-
-  const { title, status = 'Draft', scale = 'Likert 5', target = 100, variables = '', questions, hypotheses } = req.body;
-  if (!title) return res.status(400).json({ error: 'Tiêu đề khảo sát là bắt buộc.' });
-
-  const varsString = Array.isArray(variables) ? variables.join(',') : variables;
-  const initialQuestions = questions && Array.isArray(questions) && questions.length > 0
-    ? questions
-    : generateDefaultQuestions(varsString);
-
-  const initialHypotheses = hypotheses && Array.isArray(hypotheses) && hypotheses.length > 0
-    ? hypotheses
-    : generateDefaultHypotheses(varsString);
-
-  const questionsCount = initialQuestions.length;
-  const now = new Date();
-  const created_at = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-
-  const sql = `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at)
-               VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`;
-
-  db.run(sql, [
-    title,
-    questionsCount,
-    status,
-    scale,
-    parseInt(target) || 100,
-    varsString,
-    JSON.stringify(initialQuestions),
-    JSON.stringify(initialHypotheses),
-    created_at
-  ], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({
-      id: this.lastID,
-      title,
-      questions_count: questionsCount,
-      status,
-      scale,
-      responses_count: 0,
-      target: parseInt(target) || 100,
-      variables: varsString ? varsString.split(',').map(v => v.trim()).filter(Boolean) : [],
-      questions: initialQuestions,
-      hypotheses: initialHypotheses,
-      created_at
-    });
-  });
 };
 
 // Cập nhật khảo sát
-exports.updateSurvey = (req, res) => {
-  if (req.user && req.user.role === 'viewer') {
-    return res.status(403).json({ error: 'Người xem không có quyền chỉnh sửa khảo sát.' });
-  }
+exports.updateSurvey = async (req, res) => {
+  try {
+    if (req.user && req.user.role === 'viewer') {
+      return res.status(403).json({ error: 'Người xem không có quyền chỉnh sửa khảo sát.' });
+    }
 
-  const { id } = req.params;
-  const { title, questions_count, status, scale, target, variables, questions, hypotheses } = req.body;
+    const { id } = req.params;
+    const { title, questions_count, status, scale, target, variables, questions, hypotheses } = req.body;
 
-  db.get(`SELECT * FROM surveys WHERE id = ?`, [id], (err, current) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!current) return res.status(404).json({ error: 'Không tìm thấy khảo sát để cập nhật.' });
+    const { rows: currentRows } = await query(`SELECT * FROM surveys WHERE id = $1`, [id]);
+    if (!currentRows.length) return res.status(404).json({ error: 'Không tìm thấy khảo sát để cập nhật.' });
+    const current = currentRows[0];
 
     const updatedTitle = title !== undefined ? title : current.title;
     const updatedStatus = status !== undefined ? status : current.status;
@@ -231,130 +214,98 @@ exports.updateSurvey = (req, res) => {
       updatedHypothesesStr = JSON.stringify(hypotheses);
     }
 
-    const sql = `UPDATE surveys SET title = ?, questions_count = ?, status = ?, scale = ?, target = ?, variables = ?, questions = ?, hypotheses = ? WHERE id = ?`;
-    db.run(sql, [
-      updatedTitle,
-      questionsCount,
-      updatedStatus,
-      updatedScale,
-      updatedTarget,
-      updatedVars,
-      updatedQuestionsStr,
-      updatedHypothesesStr,
-      id
-    ], function(updateErr) {
-      if (updateErr) return res.status(500).json({ error: updateErr.message });
+    const { rows } = await query(
+      `UPDATE surveys SET title = $1, questions_count = $2, status = $3, scale = $4, target = $5, variables = $6, questions = $7, hypotheses = $8, updated_at = NOW() WHERE id = $9 RETURNING *`,
+      [updatedTitle, questionsCount, updatedStatus, updatedScale, updatedTarget, updatedVars, updatedQuestionsStr, updatedHypothesesStr, id]
+    );
 
-      let parsedQuestions = [];
-      try { parsedQuestions = JSON.parse(updatedQuestionsStr); } catch { parsedQuestions = []; }
+    if (!rows.length) return res.status(404).json({ error: 'Không tìm thấy khảo sát.' });
 
-      let parsedHypotheses = [];
-      try { parsedHypotheses = JSON.parse(updatedHypothesesStr); } catch { parsedHypotheses = []; }
-
-      res.json({
-        id: parseInt(id),
-        title: updatedTitle,
-        questions_count: questionsCount,
-        status: updatedStatus,
-        scale: updatedScale,
-        responses_count: current.responses_count,
-        target: updatedTarget,
-        variables: updatedVars ? updatedVars.split(',').map(v => v.trim()).filter(Boolean) : [],
-        questions: parsedQuestions,
-        hypotheses: parsedHypotheses,
-        created_at: current.created_at
-      });
-    });
-  });
+    res.json(formatSurveyRow(rows[0]));
+  } catch (err) {
+    console.error('[UPDATE SURVEY ERROR]', err);
+    res.status(500).json({ error: 'Lỗi máy chủ khi cập nhật khảo sát.' });
+  }
 };
 
 // Đổi trạng thái nhanh khảo sát
-exports.updateStatus = (req, res) => {
-  if (req.user && req.user.role === 'viewer') {
-    return res.status(403).json({ error: 'Người xem không có quyền thay đổi trạng thái khảo sát.' });
-  }
+exports.updateStatus = async (req, res) => {
+  try {
+    if (req.user && req.user.role === 'viewer') {
+      return res.status(403).json({ error: 'Người xem không có quyền thay đổi trạng thái khảo sát.' });
+    }
 
-  const { id } = req.params;
-  const { status } = req.body;
+    const { id } = req.params;
+    const { status } = req.body;
 
-  if (!['Active', 'Draft', 'Closed'].includes(status)) {
-    return res.status(400).json({ error: 'Trạng thái không hợp lệ (Active, Draft, Closed).' });
-  }
+    if (!['Active', 'Draft', 'Closed'].includes(status)) {
+      return res.status(400).json({ error: 'Trạng thái không hợp lệ (Active, Draft, Closed).' });
+    }
 
-  db.run(`UPDATE surveys SET status = ? WHERE id = ?`, [status, id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Không tìm thấy khảo sát.' });
+    const { rowCount } = await query(`UPDATE surveys SET status = $1, updated_at = NOW() WHERE id = $2`, [status, id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'Không tìm thấy khảo sát.' });
+
     res.json({ id: parseInt(id), status });
-  });
+  } catch (err) {
+    console.error('[UPDATE STATUS ERROR]', err);
+    res.status(500).json({ error: 'Lỗi máy chủ khi đổi trạng thái.' });
+  }
 };
 
-// Xóa khảo sát
-exports.deleteSurvey = (req, res) => {
-  if (req.user && req.user.role === 'viewer') {
-    return res.status(403).json({ error: 'Người xem không có quyền xóa khảo sát.' });
-  }
+// Xóa khảo sát (cascade xóa responses)
+exports.deleteSurvey = async (req, res) => {
+  try {
+    if (req.user && req.user.role === 'viewer') {
+      return res.status(403).json({ error: 'Người xem không có quyền xóa khảo sát.' });
+    }
 
-  const { id } = req.params;
-  db.run(`DELETE FROM responses WHERE survey_id = ?`, [id], (err) => {
-    if (err) console.error('Lỗi xóa responses kèm theo:', err);
-    db.run(`DELETE FROM surveys WHERE id = ?`, [id], function(deleteErr) {
-      if (deleteErr) return res.status(500).json({ error: deleteErr.message });
-      if (this.changes === 0) return res.status(404).json({ error: 'Khảo sát không tồn tại.' });
-      res.json({ message: 'Xóa khảo sát thành công.' });
-    });
-  });
+    const { id } = req.params;
+    await query(`DELETE FROM responses WHERE survey_id = $1`, [id]);
+    const { rowCount } = await query(`DELETE FROM surveys WHERE id = $1`, [id]);
+    
+    if (rowCount === 0) return res.status(404).json({ error: 'Khảo sát không tồn tại.' });
+    
+    res.json({ message: 'Xóa khảo sát thành công.' });
+  } catch (err) {
+    console.error('[DELETE SURVEY ERROR]', err);
+    res.status(500).json({ error: 'Lỗi máy chủ khi xóa khảo sát.' });
+  }
 };
 
 // Nhân bản khảo sát (Clone / Duplicate Survey 1-Click)
-exports.cloneSurvey = (req, res) => {
-  if (req.user && req.user.role === 'viewer') {
-    return res.status(403).json({ error: 'Người xem không có quyền nhân bản khảo sát.' });
-  }
+exports.cloneSurvey = async (req, res) => {
+  try {
+    if (req.user && req.user.role === 'viewer') {
+      return res.status(403).json({ error: 'Người xem không có quyền nhân bản khảo sát.' });
+    }
 
-  const { id } = req.params;
-  db.get(`SELECT * FROM surveys WHERE id = ?`, [id], (err, original) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!original) return res.status(404).json({ error: 'Không tìm thấy khảo sát gốc để nhân bản.' });
+    const { id } = req.params;
+    const { rows } = await query(`SELECT * FROM surveys WHERE id = $1`, [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Không tìm thấy khảo sát gốc để nhân bản.' });
 
+    const original = rows[0];
     const now = new Date();
-    const created_at = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const created_at = now.toISOString();
     const newTitle = `[Bản sao] ${original.title}`;
 
-    const sql = `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at)
-                 VALUES (?, ?, 'Draft', ?, 0, ?, ?, ?, ?, ?)`;
-
-    db.run(sql, [
-      newTitle,
-      original.questions_count,
-      original.scale,
-      original.target,
-      original.variables,
-      original.questions,
-      original.hypotheses,
-      created_at
-    ], function(insertErr) {
-      if (insertErr) return res.status(500).json({ error: insertErr.message });
-
-      let parsedQuestions = [];
-      try { parsedQuestions = original.questions ? JSON.parse(original.questions) : []; } catch { parsedQuestions = []; }
-
-      let parsedHypotheses = [];
-      try { parsedHypotheses = original.hypotheses ? JSON.parse(original.hypotheses) : []; } catch { parsedHypotheses = []; }
-
-      res.status(201).json({
-        id: this.lastID,
-        title: newTitle,
-        questions_count: original.questions_count,
-        status: 'Draft',
-        scale: original.scale,
-        responses_count: 0,
-        target: original.target,
-        variables: original.variables ? original.variables.split(',').map(v => v.trim()).filter(Boolean) : [],
-        questions: parsedQuestions,
-        hypotheses: parsedHypotheses,
+    const { rows: newRows } = await query(
+      `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at)
+       VALUES ($1, $2, 'Draft', $3, 0, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        newTitle,
+        original.questions_count,
+        original.scale,
+        original.target,
+        original.variables,
+        original.questions,
+        original.hypotheses,
         created_at
-      });
-    });
-  });
-};
+      ]
+    );
 
+    res.status(201).json(formatSurveyRow(newRows[0]));
+  } catch (err) {
+    console.error('[CLONE SURVEY ERROR]', err);
+    res.status(500).json({ error: 'Lỗi máy chủ khi nhân bản khảo sát.' });
+  }
+};

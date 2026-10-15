@@ -5,14 +5,6 @@ const { authenticateToken } = require('../middlewares/auth');
 const multer = require('multer');
 const path = require('path');
 
-const fs = require('fs');
-const uploadDir = path.resolve(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const crypto = require('crypto');
-
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.png', '.jpg', '.jpeg', '.txt']);
 const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
@@ -37,19 +29,9 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(8).toString('hex');
-    cb(null, `${uniqueSuffix}${ext}`);
-  }
-});
-
+// Sử dụng memoryStorage để upload lên Supabase Storage (không lưu disk local)
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
   fileFilter: fileFilter
 });
@@ -80,7 +62,7 @@ const handleUpload = (req, res, next) => {
  *       200:
  *         description: Danh sách tài liệu
  *   post:
- *     summary: Thêm tài liệu mới
+ *     summary: Thêm tài liệu mới (upload lên Supabase Storage)
  *     tags: [Documents]
  *     security:
  *       - bearerAuth: []

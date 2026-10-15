@@ -57,14 +57,13 @@ const Responses = () => {
     fetchSurveysList();
   }, []);
 
-  // Fetch responses when selected survey changes
-  const fetchResponses = async (silent = false) => {
-    if (!selectedSurveyId) return;
+  // Fetch responses when selected survey changes (or all responses if selectedSurveyId is empty)
+  const fetchResponses = async (surveyId = selectedSurveyId, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const result = await responsesAPI.getBySurvey(selectedSurveyId);
-      setData(result);
-      cachedResponsesMap.set(selectedSurveyId, result);
+      const result = await responsesAPI.getBySurvey(surveyId || '');
+      setData(result || { list: [], stats: { total: 0, valid: 0, invalid: 0 }, charts: { roleData: [], genderData: [] } });
+      cachedResponsesMap.set(surveyId || 'all', result);
     } catch (error) {
       console.error('Error fetching responses:', error);
       if (!silent) showToast('Không thể tải dữ liệu phản hồi', 'error');
@@ -74,15 +73,14 @@ const Responses = () => {
   };
 
   useEffect(() => {
-    if (selectedSurveyId) {
-      const cached = cachedResponsesMap.get(selectedSurveyId);
-      if (cached) {
-        setData(cached);
-        setLoading(false);
-        fetchResponses(true);
-      } else {
-        fetchResponses(false);
-      }
+    const key = selectedSurveyId || 'all';
+    const cached = cachedResponsesMap.get(key);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+      fetchResponses(selectedSurveyId, true);
+    } else {
+      fetchResponses(selectedSurveyId, false);
     }
   }, [selectedSurveyId]);
 
@@ -490,16 +488,24 @@ const Responses = () => {
               </div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>Chưa có phản hồi nào</h3>
               <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '420px' }}>
-                Khảo sát này chưa có phiếu trả lời nào. Bạn có thể mở biểu mẫu trực tuyến để điền thử nghiệm hoặc chia sẻ đường dẫn cho đối tượng nghiên cứu.
+                {surveys.length === 0 
+                  ? 'Hệ thống chưa có bảng hỏi khảo sát nào. Hãy tạo bảng hỏi khảo sát đầu tiên để bắt đầu thu thập dữ liệu!' 
+                  : 'Khảo sát này chưa có phiếu trả lời nào. Bạn có thể mở biểu mẫu trực tuyến để điền thử nghiệm hoặc chia sẻ đường dẫn cho đối tượng nghiên cứu.'}
               </p>
-              <Link 
-                to={`/survey/${selectedSurveyId || (surveys[0]?.id || 1)}`} 
-                className="btn btn-primary" 
-                target="_blank"
-              >
-                <ExternalLink size={16} />
-                Mở khảo sát trực tuyến
-              </Link>
+              {surveys.length === 0 ? (
+                <Link to="/surveys" className="btn btn-primary">
+                  Tạo bảng hỏi ngay
+                </Link>
+              ) : (
+                <Link 
+                  to={`/survey/${selectedSurveyId || (surveys[0]?.id || 1)}`} 
+                  className="btn btn-primary" 
+                  target="_blank"
+                >
+                  <ExternalLink size={16} />
+                  Mở khảo sát trực tuyến
+                </Link>
+              )}
             </div>
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

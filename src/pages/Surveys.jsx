@@ -167,7 +167,8 @@ const Surveys = () => {
   const handleOpenQRModal = async (survey) => {
     setQrModalSurvey(survey);
     setCopiedLink(false);
-    const surveyUrl = `${window.location.origin}/survey/${survey.id}`;
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+    const surveyUrl = `${baseUrl}/survey/${survey.id}`;
     try {
       const url = await QRCode.toDataURL(surveyUrl, {
         width: 280,
@@ -193,7 +194,8 @@ const Surveys = () => {
   };
 
   const handleCopySurveyLink = (surveyId) => {
-    const url = `${window.location.origin}/survey/${surveyId}`;
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+    const url = `${baseUrl}/survey/${surveyId}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     showToast('Đã sao chép đường dẫn khảo sát vào Clipboard!');
@@ -348,7 +350,8 @@ const Surveys = () => {
   };
 
   const handleShare = (survey) => {
-    const shareUrl = `${window.location.origin}/survey/${survey.id}`;
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
+    const shareUrl = `${baseUrl}/survey/${survey.id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl);
       showToast(`Đã sao chép link khảo sát #${survey.id}!`);

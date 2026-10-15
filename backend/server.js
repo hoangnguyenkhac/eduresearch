@@ -26,6 +26,10 @@ const responseRoutes = require('./routes/responseRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const userRoutes = require('./routes/userRoutes');
 
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'EduResearch API is running' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/surveys', surveyRoutes);

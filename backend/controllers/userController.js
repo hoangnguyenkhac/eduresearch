@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const { validatePassword } = require('../middlewares/validatePassword');
 
 // Lấy danh sách người dùng
 exports.getUsers = (req, res) => {
@@ -16,11 +17,14 @@ exports.createUser = (req, res) => {
     return res.status(400).json({ error: 'Họ tên, email và mật khẩu là bắt buộc.' });
   }
 
+  const pwCheck = validatePassword(password);
+  if (!pwCheck.valid) return res.status(400).json({ error: pwCheck.message });
+
   db.get(`SELECT id FROM users WHERE email = ?`, [email], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (row) return res.status(400).json({ error: 'Email này đã tồn tại trong hệ thống.' });
 
-    const salt = bcrypt.genSaltSync(10);
+    const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(password, salt);
 
     const sql = `INSERT INTO users (name, email, password, role, unit) VALUES (?, ?, ?, ?, ?)`;
@@ -54,7 +58,7 @@ exports.updateUser = (req, res) => {
 
     let updatedPassword = user.password;
     if (password && password.trim() !== '') {
-      const salt = bcrypt.genSaltSync(10);
+      const salt = bcrypt.genSaltSync(12);
       updatedPassword = bcrypt.hashSync(password, salt);
     }
 
@@ -115,9 +119,9 @@ exports.changePassword = (req, res) => {
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Vui lòng cung cấp đầy đủ mật khẩu hiện tại và mật khẩu mới.' });
   }
-  if (newPassword.length < 4) {
-    return res.status(400).json({ error: 'Mật khẩu mới phải có tối thiểu 4 ký tự.' });
-  }
+
+  const pwCheck = validatePassword(newPassword);
+  if (!pwCheck.valid) return res.status(400).json({ error: pwCheck.message });
 
   db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -128,7 +132,7 @@ exports.changePassword = (req, res) => {
       return res.status(400).json({ error: 'Mật khẩu hiện tại không chính xác.' });
     }
 
-    const salt = bcrypt.genSaltSync(10);
+    const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(newPassword, salt);
 
     db.run(`UPDATE users SET password = ? WHERE id = ?`, [hash, userId], function(updateErr) {

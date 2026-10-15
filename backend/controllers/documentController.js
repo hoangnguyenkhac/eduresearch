@@ -79,3 +79,26 @@ exports.deleteDocument = (req, res) => {
     });
   });
 };
+
+// Tải tài liệu an toàn (Authenticated Download - H2)
+exports.downloadDocument = (req, res) => {
+  const { id } = req.params;
+  
+  db.get(`SELECT * FROM documents WHERE id = ?`, [id], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Lỗi truy xuất tài liệu.' });
+    if (!row || !row.file_path) {
+      return res.status(404).json({ error: 'Không tìm thấy tài liệu hoặc tài liệu không có file đính kèm.' });
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    const fullPath = path.join(__dirname, '../uploads', row.file_path);
+
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: 'File vật lý không còn tồn tại trên máy chủ lưu trữ.' });
+    }
+
+    const fileName = row.original_name || `${row.title}${path.extname(row.file_path)}`;
+    res.download(fullPath, fileName);
+  });
+};

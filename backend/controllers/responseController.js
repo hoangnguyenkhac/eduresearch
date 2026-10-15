@@ -78,39 +78,84 @@ exports.getResponses = (req, res) => {
 // Thu thập / Tạo phản hồi mới
 exports.createResponse = (req, res) => {
   const {
-    survey_id = 1,
-    role = 'Cán bộ QL',
-    unit = 'Khoa CNTT',
-    gender = 'Nam',
-    time_taken = '3p 15s',
-    status = 'valid',
+    survey_id,
+    role = 'Người tham gia',
+    unit = 'Đơn vị khảo sát',
+    gender = 'Khác',
+    time_taken = '2p 30s',
+    status,
     answers = {}
   } = req.body;
 
-  const now = new Date();
-  const date = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-  const answersJson = typeof answers === 'object' ? JSON.stringify(answers) : (answers || '{}');
+  // 1. Validate survey_id (M5)
+  const sId = parseInt(survey_id, 10);
+  if (!sId || isNaN(sId)) {
+    return res.status(400).json({ error: 'Mã khảo sát (survey_id) là bắt buộc và phải là số hợp lệ.' });
+  }
 
-  const sql = `INSERT INTO responses (survey_id, role, unit, gender, time_taken, status, answers, date)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  // 2. Kiểm tra khảo sát có tồn tại trong CSDL và đang mở (status === 'Active') hay không
+  db.get(`SELECT id, status FROM surveys WHERE id = ?`, [sId], (surveyErr, survey) => {
+    if (surveyErr) return res.status(500).json({ error: 'Lỗi kiểm tra trạng thái khảo sát.' });
+    if (!survey) {
+      return res.status(404).json({ error: 'Khảo sát không tồn tại trong hệ thống.' });
+    }
 
-  db.run(sql, [survey_id, role, unit, gender, time_taken, status, answersJson, date], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
+    if (survey.status && survey.status.toLowerCase() !== 'active') {
+      return res.status(400).json({ error: 'Khảo sát này hiện đã đóng hoặc tạm dừng tiếp nhận phản hồi.' });
+    }
 
-    const newId = this.lastID;
-    // Tự động tăng responses_count của khảo sát tương ứng
-    db.run(`UPDATE surveys SET responses_count = responses_count + 1 WHERE id = ?`, [survey_id]);
+    // 3. Tự động kiểm tra Straightlining & Speeders (< 15 giây)
+    let calculatedStatus = status || 'valid';
+    const cleanTime = String(time_taken).trim();
+    if (cleanTime.endsWith('s') && !cleanTime.includes('p')) {
+      const seconds = parseInt(cleanTime, 10);
+      if (!isNaN(seconds) && seconds < 15) {
+        calculatedStatus = 'invalid'; // Speeder flag
+      }
+    }
 
-    res.status(201).json({
-      id: newId,
-      survey_id,
-      role,
-      unit,
-      gender,
-      time_taken,
-      status,
-      answers: typeof answers === 'object' ? answers : {},
-      date
+    // Kiểm tra Straightlining nếu câu trả lời toàn bộ trùng 1 giá trị duy nhất
+    if (typeof answers === 'object' && answers !== null) {
+      const numericValues = Object.values(answers).filter(v => typeof v === 'number' || (!isNaN(Number(v)) && String(v).trim() !== ''));
+      if (numericValues.length >= 6) {
+        const allSame = numericValues.every(val => Number(val) === Number(numericValues[0]));
+        if (allSame) {
+          calculatedStatus = 'invalid'; // Straightlining flag
+        }
+      }
+    }
+
+    const now = new Date();
+    const date = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const answersJson = typeof answers === 'object' ? JSON.stringify(answers) : (answers || '{}');
+
+    // Làm sạch chuỗi role, unit, gender để tránh XSS
+    const safeRole = String(role).substring(0, 50).trim();
+    const safeUnit = String(unit).substring(0, 100).trim();
+    const safeGender = String(gender).substring(0, 20).trim();
+    const safeTime = String(time_taken).substring(0, 20).trim();
+
+    const sql = `INSERT INTO responses (survey_id, role, unit, gender, time_taken, status, answers, date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    db.run(sql, [sId, safeRole, safeUnit, safeGender, safeTime, calculatedStatus, answersJson, date], function(err) {
+      if (err) return res.status(500).json({ error: 'Lỗi máy chủ khi lưu phản hồi.' });
+
+      const newId = this.lastID;
+      // Tự động tăng responses_count của khảo sát tương ứng
+      db.run(`UPDATE surveys SET responses_count = responses_count + 1 WHERE id = ?`, [sId]);
+
+      res.status(201).json({
+        id: newId,
+        survey_id: sId,
+        role: safeRole,
+        unit: safeUnit,
+        gender: safeGender,
+        time_taken: safeTime,
+        status: calculatedStatus,
+        answers: typeof answers === 'object' ? answers : {},
+        date
+      });
     });
   });
 };

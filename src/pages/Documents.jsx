@@ -94,22 +94,18 @@ const Documents = () => {
     }
   };
 
-  const handleDownload = (doc) => {
+  const handleDownload = async (doc) => {
     if (!doc.file_path) {
       showToast('Tài liệu này không có file đính kèm', 'error');
       return;
     }
-    showToast(`Bắt đầu tải xuống: ${doc.title}`);
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const serverOrigin = apiBase.startsWith('http') ? apiBase.replace(/\/api\/?$/, '') : window.location.origin;
-    const downloadUrl = `${serverOrigin}/uploads/${doc.file_path}`;
-    const element = document.createElement('a');
-    element.href = downloadUrl;
-    element.download = doc.original_name || doc.title;
-    element.target = '_blank';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    showToast(`Đang chuẩn bị tải xuống: ${doc.title}...`);
+    try {
+      await documentsAPI.download(doc.id, doc.original_name || doc.title);
+      showToast(`Tải xuống thành công: ${doc.title}`);
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi tải tài liệu', 'error');
+    }
   };
 
   const filteredDocs = documents.filter(doc => {

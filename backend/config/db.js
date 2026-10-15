@@ -81,8 +81,12 @@ function seedData() {
   // Chỉ tạo tài khoản Quản trị viên tối cao nếu chưa có tài khoản nào
   db.get("SELECT id FROM users WHERE email = 'admin@eduresearch.com'", (err, row) => {
     if (!row) {
-      const salt = bcrypt.genSaltSync(10);
-      const hash = bcrypt.hashSync('admin', salt);
+      const initialPassword = process.env.ADMIN_INITIAL_PASSWORD || 'admin';
+      if (!process.env.ADMIN_INITIAL_PASSWORD && process.env.NODE_ENV === 'production') {
+        console.warn('[SECURITY WARNING] ADMIN_INITIAL_PASSWORD not provided in production! Please change password after first login.');
+      }
+      const salt = bcrypt.genSaltSync(12);
+      const hash = bcrypt.hashSync(initialPassword, salt);
       db.run(
         `INSERT INTO users (name, email, password, role, unit) VALUES (?, ?, ?, ?, ?)`,
         ['Admin Tối Cao', 'admin@eduresearch.com', hash, 'admin', 'Ban Giám Đốc'],
@@ -90,7 +94,7 @@ function seedData() {
           if (insertErr) {
             console.error('Lỗi tạo tài khoản admin mặc định:', insertErr.message);
           } else {
-            console.log('Đã tạo tài khoản admin tối cao: admin@eduresearch.com / admin');
+            console.log('Đã tạo tài khoản admin ban đầu: admin@eduresearch.com');
           }
         }
       );

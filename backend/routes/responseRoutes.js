@@ -27,8 +27,19 @@ const { authenticateToken } = require('../middlewares/auth');
  *       201:
  *         description: Gửi phản hồi thành công
  */
+const rateLimit = require('express-rate-limit');
+
+// Rate limiter cho gửi phản hồi khảo sát công khai — chống bot spam / DoS
+const publicResponseLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Bạn đang gửi phản hồi quá thường xuyên. Vui lòng chờ 1 phút trước khi thử lại.' }
+});
+
 router.get('/', authenticateToken, responseController.getResponses);
-router.post('/', responseController.createResponse);
+router.post('/', publicResponseLimiter, responseController.createResponse);
 router.post('/import', authenticateToken, responseController.importResponses);
 router.post('/bulk-delete', authenticateToken, responseController.bulkDeleteResponses);
 router.post('/bulk-status', authenticateToken, responseController.bulkUpdateStatus);

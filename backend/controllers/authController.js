@@ -2,23 +2,37 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { SECRET_KEY } = require('../middlewares/auth');
+const { validatePassword } = require('../middlewares/validatePassword');
 
 exports.register = (req, res) => {
-  const { name, email, password, role, unit } = req.body;
+  const { name, email, password, unit } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Vui lòng cung cấp đủ thông tin.' });
 
-  db.get(`SELECT id FROM users WHERE email = ?`, [email], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Lỗi server' });
-    if (row) return res.status(400).json({ error: 'Email đã tồn tại' });
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Định dạng email không hợp lệ.' });
+  }
+
+  const pwCheck = validatePassword(password);
+  if (!pwCheck.valid) return res.status(400).json({ error: pwCheck.message });
+
+  // SECURITY FIX (C3): Public registration cannot grant admin or elevated roles.
+  // Elevated roles (manager, admin) can ONLY be granted by existing admins via user management.
+  const role = 'viewer';
+
+  db.get(`SELECT id FROM users WHERE email = ?`, [email.toLowerCase().trim()], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Lỗi máy chủ khi kiểm tra tài khoản.' });
+    if (row) return res.status(400).json({ error: 'Email đã tồn tại trên hệ thống.' });
     
-    const salt = bcrypt.genSaltSync(10);
+    const salt = bcrypt.genSaltSync(12);
     const hash = bcrypt.hashSync(password, salt);
     
     db.run(`INSERT INTO users (name, email, password, role, unit) VALUES (?, ?, ?, ?, ?)`, 
-      [name, email, hash, role || 'viewer', unit], 
-      function(err) {
-        if (err) return res.status(500).json({ error: 'Không thể tạo tài khoản.' });
-        res.status(201).json({ message: 'Tạo tài khoản thành công' });
+      [name.trim(), email.toLowerCase().trim(), hash, role, unit ? unit.trim() : ''], 
+      function(insertErr) {
+        if (insertErr) return res.status(500).json({ error: 'Không thể tạo tài khoản.' });
+        res.status(201).json({ message: 'Tạo tài khoản thành công với quyền Người xem (viewer).' });
       });
   });
 };

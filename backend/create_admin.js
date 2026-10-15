@@ -4,11 +4,11 @@ const db = new sqlite3.Database('./database.sqlite');
 
 const name = 'Admin Tối Cao';
 const email = 'admin@eduresearch.com';
-const password = 'admin'; // default password
+const password = process.env.ADMIN_PASSWORD || 'admin'; // default password or env
 const role = 'admin';
 const unit = 'Ban Giám Đốc';
 
-const salt = bcrypt.genSaltSync(10);
+const salt = bcrypt.genSaltSync(12);
 const hash = bcrypt.hashSync(password, salt);
 
 db.run(`INSERT INTO users (name, email, password, role, unit) VALUES (?, ?, ?, ?, ?)`, 

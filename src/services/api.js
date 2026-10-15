@@ -85,6 +85,25 @@ export const documentsAPI = {
     }
     return data;
   },
+  download: async (id, fileName) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${BASE_URL}/documents/${id}/download`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Lỗi khi tải file');
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || 'document';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
   delete: (id) => fetchAPI(`/documents/${id}`, { method: 'DELETE' }),
 };
 

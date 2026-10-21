@@ -112,6 +112,10 @@ const Profile = () => {
     ? 'Quản trị viên cấp cao (Super Admin)' 
     : (currentUser?.role === 'researcher' ? 'Nghiên cứu viên chính' : 'Người xem dữ liệu');
 
+  const roleBadgeColor = currentUser?.role === 'admin' 
+    ? { bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' }
+    : { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' };
+
   if (loading && !currentUser) {
     return (
       <div style={{ animation: 'fadeIn 0.3s ease' }}>

@@ -741,7 +741,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
           {/* KHÂU 1: LÀM SẠCH VÀ CHUẨN HÓA DỮ LIỆU THÔNG MINH */}
           {/* ========================================================= */}
           {activeStage === 1 && (
-            <div>
+            <div style={{ animation: 'fadeIn 0.25s ease' }}>
               {/* 4 Metric Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div className="card" style={{ padding: '1.25rem' }}>
@@ -850,7 +850,29 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
           {/* KHÂU 2: ĐỘ TIN CẬY & GIÁ TRỊ CỦA THANG ĐO */}
           {/* ========================================================= */}
           {activeStage === 2 && (
-            <div>
+            <div style={{ animation: 'fadeIn 0.25s ease' }}>
+              {(analysisData.khau2_reliability?.insufficientData || (analysisData.khau1_cleaning?.cleanCount || 0) < 2) ? (
+                <div className="card" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '2rem' }}>
+                  <AlertTriangle size={48} color="#F59E0B" style={{ margin: '0 auto 1rem auto' }} />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                    Chưa đủ dữ liệu sạch để kiểm định Khâu 2 (Độ tin cậy &amp; Giá trị thang đo)
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', maxWidth: '580px', margin: '0 auto 1.5rem auto' }}>
+                    Khảo sát hiện có <b>{analysisData.khau1_cleaning?.cleanCount || 0} phiếu sạch</b> sau khi lọc rác (chuẩn học thuật APA 7 yêu cầu tối thiểu 2 phiếu sạch để tính hệ số Cronbach's Alpha, tương quan biến - tổng ITC và ma trận xoay EFA).
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn btn-primary" onClick={handleSeedResponses} disabled={analyzing}>
+                      <Database size={16} /> Nạp 75 phản hồi thực địa mẫu
+                    </button>
+                    {filterOutliers && (
+                      <button className="btn btn-outline" onClick={() => setFilterOutliers(false)}>
+                        Tắt bộ lọc phiếu rác để kiểm tra dữ liệu thô
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* Cronbach Alpha Cards & Chart */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="card" style={{ padding: '1.25rem' }}>
@@ -860,7 +882,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                   </h3>
                   <div style={{ height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analysisData.khau2_reliability.alphaBarData}>
+                      <BarChart data={analysisData.khau2_reliability?.alphaBarData || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" />
                         <YAxis domain={[0.4, 1.0]} />
@@ -902,9 +924,9 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                   <div style={{ padding: '0.85rem', backgroundColor: '#F8FAFC', borderRadius: 'var(--radius-md)', border: '1px solid #E2E8F0', fontSize: '0.85rem' }}>
                     <div style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '0.25rem' }}>Bartlett’s Test of Sphericity:</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-                      <span>Chi-Square (&chi;&sup2;): <b>{analysisData.khau2_reliability.bartlett.chiSquare}</b></span>
-                      <span>df: <b>{analysisData.khau2_reliability.bartlett.df}</b></span>
-                      <span>Sig. (p-value): <b>{analysisData.khau2_reliability.bartlett.pValue}</b></span>
+                      <span>Chi-Square (&chi;&sup2;): <b>{analysisData.khau2_reliability?.bartlett?.chiSquare || '0.00'}</b></span>
+                      <span>df: <b>{analysisData.khau2_reliability?.bartlett?.df || 0}</b></span>
+                      <span>Sig. (p-value): <b>{analysisData.khau2_reliability?.bartlett?.pValue || 'N/A'}</b></span>
                     </div>
                   </div>
                 </div>
@@ -927,7 +949,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.khau2_reliability.alphaResults.map((a, idx) => (
+                      {(analysisData.khau2_reliability?.alphaResults || []).map((a, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: '600' }}>{a.name}</td>
                           <td><code>{a.variable}</code></td>
@@ -973,7 +995,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.khau2_reliability.itemTotalStats.map((item, idx) => (
+                      {(analysisData.khau2_reliability?.itemTotalStats || []).map((item, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 'bold' }}>{item.code}</td>
                           <td style={{ maxWidth: '320px', fontSize: '0.85rem' }}>{item.name}</td>
@@ -1014,7 +1036,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.khau2_reliability.efaLoadings.map((load, idx) => (
+                      {(analysisData.khau2_reliability?.efaLoadings || []).map((load, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: '600' }}>{load.item}</td>
                           <td style={{ textAlign: 'center', fontWeight: load.f1 >= 0.5 ? 'bold' : 'normal', color: load.f1 >= 0.5 ? '#1E40AF' : '#64748B' }}>{load.f1 || '-'}</td>
@@ -1030,6 +1052,8 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                 </div>
               </div>
 
+                </>
+              )}
             </div>
           )}
 
@@ -1037,7 +1061,29 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
           {/* KHÂU 3: THỐNG KÊ MÔ TẢ, TƯƠNG QUAN PEARSON & PHÂN NHÓM HỒ SƠ */}
           {/* ========================================================= */}
           {activeStage === 3 && (
-            <div>
+            <div style={{ animation: 'fadeIn 0.25s ease' }}>
+              {(analysisData.khau3_descriptive?.insufficientData || (analysisData.khau1_cleaning?.cleanCount || 0) < 2) ? (
+                <div className="card" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '2rem' }}>
+                  <AlertTriangle size={48} color="#F59E0B" style={{ margin: '0 auto 1rem auto' }} />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                    Chưa đủ dữ liệu sạch để chạy Khâu 3 (Thống kê mô tả &amp; Phân cụm DRI)
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', maxWidth: '580px', margin: '0 auto 1.5rem auto' }}>
+                    Khảo sát hiện có <b>{analysisData.khau1_cleaning?.cleanCount || 0} phiếu sạch</b> sau khi lọc rác (chuẩn học thuật APA 7 yêu cầu tối thiểu 2 phiếu sạch để tính Mean, SD, Skewness, Kurtosis và ma trận tương quan Pearson).
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn btn-primary" onClick={handleSeedResponses} disabled={analyzing}>
+                      <Database size={16} /> Nạp 75 phản hồi thực địa mẫu
+                    </button>
+                    {filterOutliers && (
+                      <button className="btn btn-outline" onClick={() => setFilterOutliers(false)}>
+                        Tắt bộ lọc phiếu rác để kiểm tra dữ liệu thô
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* Descriptive Table */}
               <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1060,7 +1106,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.khau3_descriptive.descriptiveTable.map((d, idx) => (
+                      {(analysisData.khau3_descriptive?.descriptiveTable || []).map((d, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 'bold' }}>{d.code} - {d.name}</td>
                           <td style={{ textAlign: 'center' }}>{d.n}</td>
@@ -1098,19 +1144,19 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                         <th>Biến tiềm ẩn</th>
                         <th style={{ textAlign: 'center' }}>Mean</th>
                         <th style={{ textAlign: 'center' }}>SD</th>
-                        {analysisData.surveyInfo.variables.map(v => (
+                        {(analysisData.surveyInfo?.variables || []).map(v => (
                           <th key={v} style={{ textAlign: 'center' }}>{v}</th>
                         ))}
                         <th style={{ textAlign: 'center' }}>VIF</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.khau3_descriptive.pearsonCorrelations.map((row, idx) => (
+                      {(analysisData.khau3_descriptive?.pearsonCorrelations || []).map((row, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 'bold' }}>{row.var}</td>
                           <td style={{ textAlign: 'center' }}>{row.mean}</td>
                           <td style={{ textAlign: 'center' }}>{row.sd}</td>
-                          {analysisData.surveyInfo.variables.map(v => (
+                          {(analysisData.surveyInfo?.variables || []).map(v => (
                             <td key={v} style={{ 
                               textAlign: 'center', 
                               fontWeight: row[v]?.includes('**') ? 'bold' : 'normal',
@@ -1119,7 +1165,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                               {row[v] || '-'}
                             </td>
                           ))}
-                          <td style={{ textAlign: 'center', fontWeight: '500', color: row.vif < 2.5 ? '#059669' : '#D97706' }}>
+                          <td style={{ textAlign: 'center', fontWeight: '500', color: (row.vif || 1) < 2.5 ? '#059669' : '#D97706' }}>
                             {row.vif || '1.00'}
                           </td>
                         </tr>
@@ -1146,14 +1192,14 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       </span>
                     </div>
                     <GaugeMeter 
-                      score={analysisData.khau3_descriptive.dri.average} 
+                      score={analysisData.khau3_descriptive?.dri?.average || 0} 
                       title="Chỉ số Sẵn sàng Chuyển đổi (Readiness Index - AT)" 
                     />
                   </div>
 
                   <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #E2E8F0', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-                      Biên độ mẫu khảo sát: Min = <b>{analysisData.khau3_descriptive.dri.min}</b> • Max = <b>{analysisData.khau3_descriptive.dri.max}</b>
+                      Biên độ mẫu khảo sát: Min = <b>{analysisData.khau3_descriptive?.dri?.min || 0}</b> • Max = <b>{analysisData.khau3_descriptive?.dri?.max || 0}</b>
                     </div>
                     <Link 
                       to={`/clustering?surveyId=${selectedSurveyId}`}
@@ -1198,7 +1244,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
 
                   <div style={{ height: '230px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analysisData.khau3_descriptive.clustersBarData}>
+                      <BarChart data={analysisData.khau3_descriptive?.clustersBarData || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="pillar" />
                         <YAxis domain={[1, 5]} />
@@ -1215,7 +1261,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
 
               {/* Cluster Strategic Profiles */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                {analysisData.khau3_descriptive.clustersProfiles.map((cp, idx) => (
+                {(analysisData.khau3_descriptive?.clustersProfiles || []).map((cp, idx) => (
                   <div key={idx} className="card" style={{ padding: '1.25rem', borderTop: `4px solid ${cp.color}` }}>
                     <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: cp.color, marginBottom: '0.25rem' }}>
                       {cp.title}
@@ -1236,6 +1282,8 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                 ))}
               </div>
 
+                </>
+              )}
             </div>
           )}
 
@@ -1243,7 +1291,29 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
           {/* KHÂU 4: KIỂM ĐỊNH SEM & HỌC MÁY (ML & SHAP) */}
           {/* ========================================================= */}
           {activeStage === 4 && (
-            <div>
+            <div style={{ animation: 'fadeIn 0.25s ease' }}>
+              {(analysisData.khau4_sem_ml?.insufficientData || (analysisData.khau1_cleaning?.cleanCount || 0) < 3) ? (
+                <div className="card" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '2rem' }}>
+                  <AlertTriangle size={48} color="#F59E0B" style={{ margin: '0 auto 1rem auto' }} />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                    Chưa đủ dữ liệu để chạy Khâu 4 (Mô hình PLS-SEM &amp; Học máy XGBoost/SHAP)
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', maxWidth: '580px', margin: '0 auto 1.5rem auto' }}>
+                    Khảo sát hiện có <b>{analysisData.khau1_cleaning?.cleanCount || 0} phiếu sạch</b> sau khi lọc rác (mô hình hồi quy đa biến và máy học yêu cầu tối thiểu 3 phản hồi hợp lệ để ước lượng hệ số Beta, T-statistic và độ quan trọng SHAP).
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn btn-primary" onClick={handleSeedResponses} disabled={analyzing}>
+                      <Database size={16} /> Nạp 75 phản hồi thực địa mẫu
+                    </button>
+                    {filterOutliers && (
+                      <button className="btn btn-outline" onClick={() => setFilterOutliers(false)}>
+                        Tắt bộ lọc phiếu rác để kiểm tra dữ liệu thô
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* PLS-SEM Hypothesis Results */}
               <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1251,7 +1321,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                   Bảng 4a. Kết quả Kiểm định Mô hình Cấu trúc PLS-SEM / Hồi quy Đa biến
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                  Kiểm định các giả thuyết tác động đến biến phụ thuộc <b>{analysisData.khau4_sem_ml.dependentVar}</b>. Mô hình đạt <b>R&sup2; = {analysisData.khau4_sem_ml.modelR2}</b> (giải thích {((analysisData.khau4_sem_ml.modelR2) * 100).toFixed(1)}% độ biến thiên):
+                  Kiểm định các giả thuyết tác động đến biến phụ thuộc <b>{analysisData.khau4_sem_ml?.dependentVar || 'AT'}</b>. Mô hình đạt <b>R&sup2; = {analysisData.khau4_sem_ml?.modelR2 || 0}</b> (giải thích {(((analysisData.khau4_sem_ml?.modelR2 || 0)) * 100).toFixed(1)}% độ biến thiên):
                 </p>
 
                 <div className="table-responsive">
@@ -1269,7 +1339,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.khau4_sem_ml.hypothesisResults.map((h, idx) => (
+                      {(analysisData.khau4_sem_ml?.hypothesisResults || []).map((h, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 'bold' }}>{h.id}</td>
                           <td><b>{h.path}</b></td>
@@ -1320,7 +1390,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                         </tr>
                       </thead>
                       <tbody>
-                        {analysisData.khau4_sem_ml.mlBenchmark.map((m, idx) => (
+                        {(analysisData.khau4_sem_ml?.mlBenchmark || []).map((m, idx) => (
                           <tr key={idx}>
                             <td style={{ fontWeight: 'bold' }}>{m.model}</td>
                             <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#1E40AF' }}>{m.r2}</td>
@@ -1346,7 +1416,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {analysisData.khau4_sem_ml.shapImportance.map((item, idx) => (
+                    {(analysisData.khau4_sem_ml?.shapImportance || []).map((item, idx) => (
                       <div key={idx}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginBottom: '0.2rem' }}>
                           <span style={{ fontWeight: '600' }}>#{idx + 1} {item.feature}</span>
@@ -1386,8 +1456,8 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                 {(() => {
                   // Tính toán AT dự báo theo trọng số SHAP
                   const shapMap = {};
-                  analysisData.khau4_sem_ml.shapImportance.forEach(s => {
-                    shapMap[s.variable] = s.pct / 100;
+                  (analysisData.khau4_sem_ml?.shapImportance || []).forEach(s => {
+                    if (s && s.variable) shapMap[s.variable] = (s.pct || 0) / 100;
                   });
 
                   const wSP = shapMap['SP'] || shapMap['STR'] || 0.22;
@@ -1501,6 +1571,8 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                 })()}
               </div>
 
+                </>
+              )}
             </div>
           )}
 
@@ -1508,7 +1580,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
           {/* KHÂU 5: PHÂN TÍCH Ý KIẾN ĐỊNH TÍNH & XUẤT BÁO CÁO APA 7 */}
           {/* ========================================================= */}
           {activeStage === 5 && (
-            <div>
+            <div style={{ animation: 'fadeIn 0.25s ease' }}>
               {/* Sentiment & Word Cloud */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 
@@ -1519,32 +1591,32 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                     Phân Tích Cảm Xúc Ý Kiến Tự Luận (Sentiment Analysis)
                   </h3>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                    Tổng số ý kiến tự luận: <b>{analysisData.khau5_qualitative.sentimentStats.total}</b> ý kiến
+                    Tổng số ý kiến tự luận: <b>{analysisData.khau5_qualitative?.sentimentStats?.total || 0}</b> ý kiến
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                     <div style={{ padding: '0.75rem', backgroundColor: '#F0FDF4', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.75rem', color: '#166534', fontWeight: '600' }}>TÍCH CỰC</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#166534' }}>
-                        {analysisData.khau5_qualitative.sentimentStats.positivePct}%
+                        {analysisData.khau5_qualitative?.sentimentStats?.positivePct || 0}%
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#15803D' }}>{analysisData.khau5_qualitative.sentimentStats.positive} ý kiến</div>
+                      <div style={{ fontSize: '0.7rem', color: '#15803D' }}>{analysisData.khau5_qualitative?.sentimentStats?.positive || 0} ý kiến</div>
                     </div>
 
                     <div style={{ padding: '0.75rem', backgroundColor: '#FEF3C7', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.75rem', color: '#92400E', fontWeight: '600' }}>TRUNG TÍNH</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#92400E' }}>
-                        {analysisData.khau5_qualitative.sentimentStats.neutralPct}%
+                        {analysisData.khau5_qualitative?.sentimentStats?.neutralPct || 0}%
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#B45309' }}>{analysisData.khau5_qualitative.sentimentStats.neutral} ý kiến</div>
+                      <div style={{ fontSize: '0.7rem', color: '#B45309' }}>{analysisData.khau5_qualitative?.sentimentStats?.neutral || 0} ý kiến</div>
                     </div>
 
                     <div style={{ padding: '0.75rem', backgroundColor: '#FEE2E2', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.75rem', color: '#991B1B', fontWeight: '600' }}>CẦN CẢI THIỆN</div>
                       <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#991B1B' }}>
-                        {analysisData.khau5_qualitative.sentimentStats.improvePct}%
+                        {analysisData.khau5_qualitative?.sentimentStats?.improvePct || 0}%
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#DC2626' }}>{analysisData.khau5_qualitative.sentimentStats.improve} ý kiến</div>
+                      <div style={{ fontSize: '0.7rem', color: '#DC2626' }}>{analysisData.khau5_qualitative?.sentimentStats?.improve || 0} ý kiến</div>
                     </div>
                   </div>
                 </div>
@@ -1560,7 +1632,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center', minHeight: '160px', padding: '0.75rem', backgroundColor: '#F8FAFC', borderRadius: 'var(--radius-md)' }}>
-                    {analysisData.khau5_qualitative.wordCloudTags.map((tag, idx) => (
+                    {(analysisData.khau5_qualitative?.wordCloudTags || []).map((tag, idx) => (
                       <span 
                         key={idx}
                         style={{
@@ -1647,7 +1719,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                   }
 
                   if (displayQuotes.length === 0) {
-                    displayQuotes = analysisData.khau5_qualitative.textComments.slice(0, 8);
+                    displayQuotes = (analysisData.khau5_qualitative?.textComments || []).slice(0, 8);
                   }
 
                   const handleCopyQuote = (q) => {

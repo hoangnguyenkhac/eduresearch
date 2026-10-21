@@ -347,7 +347,20 @@ function runSmartDataCleaning(rawResponses, likertQuestions) {
 function runReliabilityAndValidity(cleanResponses, likertQuestions, variablesList) {
   const N = cleanResponses.length;
   if (N < 2) {
-    return { error: 'Không đủ dữ liệu sạch (N < 2) để kiểm định Cronbach Alpha và EFA.' };
+    return {
+      error: 'Không đủ dữ liệu sạch (N < 2) để kiểm định Cronbach Alpha và EFA.',
+      insufficientData: true,
+      alphaResults: [],
+      alphaBarData: [],
+      radarData: [],
+      kmo: '0.00',
+      kmoEval: 'Chưa đủ dữ liệu',
+      totalVarianceExplained: 0,
+      bartlett: { chiSquare: '0.00', df: 0, pValue: 'N/A' },
+      itemTotalStats: [],
+      efaLoadings: [],
+      numFactors: 0
+    };
   }
 
   // Gom câu hỏi theo từng nhân tố lý thuyết
@@ -582,7 +595,20 @@ function runReliabilityAndValidity(cleanResponses, likertQuestions, variablesLis
 
 function runDescriptivePearsonAndProfiling(cleanResponses, likertQuestions, variablesList) {
   const N = cleanResponses.length;
-  if (N < 2) return { error: 'Không đủ dữ liệu cho thống kê mô tả.' };
+  if (N < 2) {
+    return {
+      error: 'Không đủ dữ liệu cho thống kê mô tả.',
+      insufficientData: true,
+      descriptiveTable: [],
+      barData: [],
+      pearsonCorrelations: [],
+      dri: { average: 0, min: 0, max: 0 },
+      clustersPie: [],
+      clustersBarData: [],
+      clustersProfiles: [],
+      respondentConstructScores: []
+    };
+  }
 
   // 1. TÍNH ĐIỂM COMPOSITE CHO TỪNG NHÂN TỐ CỦA TỪNG ĐỐI TƯỢNG
   const respondentConstructScores = cleanResponses.map(r => {
@@ -796,7 +822,17 @@ function runDescriptivePearsonAndProfiling(cleanResponses, likertQuestions, vari
 
 function runSEMAndMachineLearning(respondentConstructScores, hypothesesList, variablesList) {
   const N = respondentConstructScores.length;
-  if (N < 3) return { error: 'Không đủ dữ liệu sạch để huấn luyện mô hình học máy và kiểm định SEM.' };
+  if (N < 3) {
+    return {
+      error: 'Không đủ dữ liệu sạch để huấn luyện mô hình học máy và kiểm định SEM.',
+      insufficientData: true,
+      dependentVar: variablesList && variablesList.length > 0 ? variablesList[variablesList.length - 1] : 'AT',
+      modelR2: 0,
+      hypothesisResults: [],
+      mlBenchmark: [],
+      shapImportance: []
+    };
+  }
 
   // Xác định biến phụ thuộc (Dependent Variable): Ưu tiên REA, hoặc AT, hoặc SER
   const dependentVar = variablesList.includes('REA') ? 'REA'

@@ -111,4 +111,69 @@ export const SkeletonCard = ({ height = '180px' }) => {
   );
 };
 
+/**
+ * Survey Card Skeleton for Surveys.jsx
+ */
+export const SkeletonSurveyCard = () => {
+  return (
+    <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+        <Skeleton width="70%" height="1.4rem" />
+        <Skeleton width="75px" height="1.4rem" borderRadius="var(--radius-full)" />
+      </div>
+      <Skeleton width="40%" height="0.875rem" />
+      <Skeleton width="95%" height="0.875rem" />
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <Skeleton width="60px" height="1.5rem" borderRadius="4px" />
+        <Skeleton width="60px" height="1.5rem" borderRadius="4px" />
+        <Skeleton width="60px" height="1.5rem" borderRadius="4px" />
+      </div>
+      <div style={{ marginTop: 'auto', paddingTop: '1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Skeleton width="110px" height="1rem" />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Skeleton width="32px" height="32px" borderRadius="var(--radius-md)" />
+          <Skeleton width="32px" height="32px" borderRadius="var(--radius-md)" />
+          <Skeleton width="32px" height="32px" borderRadius="var(--radius-md)" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Public Survey Taking Form Skeleton
+ */
+export const SkeletonPublicSurvey = () => {
+  return (
+    <div style={{ maxWidth: '780px', margin: '2rem auto', padding: '0 1rem' }}>
+      <div className="card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
+        <Skeleton width="40%" height="1rem" style={{ marginBottom: '1rem' }} />
+        <Skeleton width="85%" height="2rem" style={{ marginBottom: '0.75rem' }} />
+        <Skeleton width="65%" height="1.25rem" style={{ marginBottom: '1.5rem' }} />
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Skeleton width="120px" height="1.5rem" borderRadius="var(--radius-full)" />
+          <Skeleton width="90px" height="1.5rem" borderRadius="var(--radius-full)" />
+        </div>
+      </div>
+
+      {[1, 2, 3].map((idx) => (
+        <div key={idx} className="card" style={{ padding: '1.75rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+            <Skeleton width="30px" height="1.5rem" borderRadius="4px" />
+            <Skeleton width="80%" height="1.5rem" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem', marginTop: '1.25rem' }}>
+            {[1, 2, 3, 4, 5].map((opt) => (
+              <div key={opt} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <Skeleton width="24px" height="24px" borderRadius="50%" />
+                <Skeleton width="40px" height="0.75rem" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default Skeleton;

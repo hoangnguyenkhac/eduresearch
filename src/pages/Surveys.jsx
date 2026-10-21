@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { surveysAPI } from '../services/api';
 import Toast from '../components/Toast';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 // 4 MẪU BỘ CÂU HỎI CHUẨN THEO CHỨC VỤ
 const ROLE_QUESTIONNAIRES = {
@@ -557,14 +558,6 @@ const Surveys = () => {
     return matchInst && matchAud;
   });
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Đang tải danh sách bảng hỏi...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
@@ -637,7 +630,26 @@ const Surveys = () => {
         )}
       </div>
 
-      {filteredSurveys.length === 0 ? (
+      {loading ? (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-container">
+            <table className="table">
+              <thead style={{ backgroundColor: '#F9FAFB' }}>
+                <tr>
+                  <th>Tiêu đề &amp; Đơn vị định danh</th>
+                  <th>Đối tượng chức vụ</th>
+                  <th>Trạng thái</th>
+                  <th>Thang đo</th>
+                  <th>Tiến độ mẫu (N)</th>
+                  <th>Biến nghiên cứu</th>
+                  <th style={{ textAlign: 'right' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <SkeletonTableRows columns={7} rows={4} />
+            </table>
+          </div>
+        </div>
+      ) : filteredSurveys.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <FileSpreadsheet size={28} />

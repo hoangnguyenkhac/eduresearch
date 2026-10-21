@@ -5,6 +5,7 @@ import { dashboardAPI } from '../services/api';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ClipboardList, MessageSquare, CheckCircle, BarChart2, Plus, ArrowRight, Compass, Sparkles, Filter, AlertTriangle, RefreshCw } from 'lucide-react';
 import GaugeMeter from '../components/GaugeMeter';
+import { Skeleton, SkeletonStatCard, SkeletonChart } from '../components/Skeleton';
 
 const PALETTE = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1'];
 
@@ -35,9 +36,41 @@ const Dashboard = () => {
 
   if (loading && !data) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-muted)', gap: '1rem' }}>
-        <div style={{ width: '36px', height: '36px', border: '3px solid #E2E8F0', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <div>Đang tải dữ liệu tổng quan...</div>
+      <div style={{ animation: 'fadeIn 0.3s ease' }}>
+        {/* Header Skeleton */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <Skeleton width="280px" height="2rem" style={{ marginBottom: '0.5rem' }} />
+            <Skeleton width="420px" height="1rem" />
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <Skeleton width="220px" height="2.5rem" borderRadius="var(--radius-md)" />
+            <Skeleton width="130px" height="2.5rem" borderRadius="var(--radius-md)" />
+          </div>
+        </div>
+
+        {/* 4 Stat Cards Skeleton */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+
+        {/* 2 Charts Skeleton */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          <SkeletonChart height="300px" />
+          <SkeletonChart height="300px" />
+        </div>
+
+        {/* Bottom Banner Skeleton */}
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ width: '60%' }}>
+            <Skeleton width="50%" height="1.25rem" style={{ marginBottom: '0.5rem' }} />
+            <Skeleton width="80%" height="0.875rem" />
+          </div>
+          <Skeleton width="140px" height="2.25rem" borderRadius="var(--radius-md)" />
+        </div>
       </div>
     );
   }

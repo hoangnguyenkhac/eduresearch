@@ -3,9 +3,10 @@ import { User, Lock, Mail, Building2, Shield, KeyRound, CheckCircle, AlertCircle
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import Toast from '../components/Toast';
+import { Skeleton } from '../components/Skeleton';
 
 const Profile = () => {
-  const { currentUser, updateCurrentUser } = useAuth();
+  const { currentUser, updateCurrentUser, loading } = useAuth();
 
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'password'
 
@@ -111,9 +112,39 @@ const Profile = () => {
     ? 'Quản trị viên cấp cao (Super Admin)' 
     : (currentUser?.role === 'researcher' ? 'Nghiên cứu viên chính' : 'Người xem dữ liệu');
 
-  const roleBadgeColor = currentUser?.role === 'admin' 
-    ? { bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' }
-    : { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' };
+  if (loading && !currentUser) {
+    return (
+      <div style={{ animation: 'fadeIn 0.3s ease' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <Skeleton width="220px" height="2rem" style={{ marginBottom: '0.5rem' }} />
+          <Skeleton width="400px" height="1rem" />
+        </div>
+
+        <div className="card" style={{ padding: '2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <Skeleton width="84px" height="84px" borderRadius="50%" />
+          <div style={{ flex: 1 }}>
+            <Skeleton width="240px" height="1.75rem" style={{ marginBottom: '0.5rem' }} />
+            <Skeleton width="180px" height="1rem" style={{ marginBottom: '0.75rem' }} />
+            <Skeleton width="140px" height="1.5rem" borderRadius="var(--radius-full)" />
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '2rem' }}>
+          <Skeleton width="160px" height="1.5rem" style={{ marginBottom: '1.5rem' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+            <div>
+              <Skeleton width="100px" height="1rem" style={{ marginBottom: '0.5rem' }} />
+              <Skeleton width="100%" height="2.5rem" borderRadius="var(--radius-md)" />
+            </div>
+            <div>
+              <Skeleton width="100px" height="1rem" style={{ marginBottom: '0.5rem' }} />
+              <Skeleton width="100%" height="2.5rem" borderRadius="var(--radius-md)" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

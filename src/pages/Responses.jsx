@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { responsesAPI, surveysAPI } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import Toast from '../components/Toast';
+import { SkeletonStatCard, SkeletonChart, SkeletonTableRows } from '../components/Skeleton';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6B7280'];
 
@@ -416,8 +417,42 @@ const Responses = () => {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
-          <div style={{ color: 'var(--text-muted)' }}>Đang tải dữ liệu phản hồi...</div>
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+          {/* 3 Stat Cards Skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </div>
+
+          {/* 2 Charts Skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem', marginBottom: '2rem' }}>
+            <SkeletonChart height="240px" />
+            <SkeletonChart height="240px" />
+          </div>
+
+          {/* Table Skeleton */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-container">
+              <table className="table" style={{ fontSize: '0.875rem' }}>
+                <thead style={{ backgroundColor: '#F9FAFB' }}>
+                  <tr>
+                    <th style={{ width: '40px' }}></th>
+                    <th style={{ width: '60px' }}>Mã #</th>
+                    <th>Trường / Cơ sở</th>
+                    <th>Đối tượng</th>
+                    <th>Đơn vị</th>
+                    <th>Giới tính</th>
+                    <th>Thời gian</th>
+                    <th>Ngày gửi</th>
+                    <th>Trạng thái</th>
+                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <SkeletonTableRows columns={10} rows={5} />
+              </table>
+            </div>
+          </div>
         </div>
       ) : (
         <>

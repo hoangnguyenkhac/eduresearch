@@ -11,6 +11,7 @@ import {
 import { surveysAPI } from '../services/api';
 import GaugeMeter from '../components/GaugeMeter';
 import Toast from '../components/Toast';
+import { Skeleton, SkeletonStatCard, SkeletonChart } from '../components/Skeleton';
 
 const CLUSTER_COLORS = {
   1: '#10B981', // Cụm 1: Tiên phong (Xanh lá)
@@ -73,8 +74,28 @@ const Clustering = () => {
 
   if (loading && !analysisData) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--text-muted)' }}>
-        Đang tải Bản đồ Phân cụm Hồ sơ Phát triển...
+      <div style={{ animation: 'fadeIn 0.3s ease' }}>
+        {/* Header Skeleton */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <Skeleton width="320px" height="2rem" style={{ marginBottom: '0.5rem' }} />
+            <Skeleton width="480px" height="1rem" />
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <Skeleton width="220px" height="2.5rem" borderRadius="var(--radius-md)" />
+            <Skeleton width="130px" height="2.5rem" borderRadius="var(--radius-md)" />
+          </div>
+        </div>
+
+        {/* 3 Cluster Stat Cards Skeleton */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+
+        {/* Big Scatter Map Skeleton */}
+        <SkeletonChart height="420px" />
       </div>
     );
   }

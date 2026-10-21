@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { GraduationCap, CheckCircle2, ArrowRight, ArrowLeft, Send, AlertTriangle, Clock, Building2, User, School, Briefcase, Users } from 'lucide-react';
 import { responsesAPI, surveysAPI } from '../services/api';
+import { SkeletonPublicSurvey } from '../components/Skeleton';
 
 // THANG ĐO CHUẨN LIKERT 5 MỨC ĐỘ
 const LIKERT_5_OPTIONS = [
@@ -219,11 +220,7 @@ const PublicSurvey = () => {
   };
 
   if (fetching) {
-    return (
-      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-        <div style={{ color: 'var(--text-muted)' }}>Đang tải biểu mẫu khảo sát...</div>
-      </div>
-    );
+    return <SkeletonPublicSurvey />;
   }
 
   // Khảo sát đã đóng

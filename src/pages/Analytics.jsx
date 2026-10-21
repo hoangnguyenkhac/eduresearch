@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { surveysAPI } from '../services/api';
 import GaugeMeter from '../components/GaugeMeter';
 import Toast from '../components/Toast';
+import { SkeletonStatCard, SkeletonChart } from '../components/Skeleton';
 
 const Analytics = () => {
   const { currentUser } = useAuth();
@@ -687,8 +688,37 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
         })}
       </div>
 
+      {/* LOADING SKELETON KHI ĐANG PHÂN TÍCH HOẶC TẢI DỮ LIỆU */}
+      {(analyzing || (loading && !analysisData)) && (
+        <div style={{ animation: 'fadeIn 0.3s ease' }}>
+          <div className="card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+            <div style={{ width: '28px', height: '28px', border: '3px solid #BFDBFE', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: '700', color: '#1E40AF', fontSize: '0.95rem' }}>
+                Đang nạp dữ liệu &amp; xử lý mô hình thống kê học thuật...
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#3B82F6' }}>
+                EduResearch đang tính toán Cronbach's Alpha, EFA ma trận xoay Promax và hồi quy đa biến OLS
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.5rem' }}>
+            <SkeletonChart height="300px" />
+            <SkeletonChart height="300px" />
+          </div>
+        </div>
+      )}
+
       {/* ALERT KHI CHƯA CÓ DỮ LIỆU */}
-      {analysisData && !analysisData.hasData && (
+      {!analyzing && !loading && analysisData && !analysisData.hasData && (
         <div className="card" style={{ padding: '2.5rem', textAlign: 'center', marginBottom: '2rem' }}>
           <AlertTriangle size={48} color="#F59E0B" style={{ margin: '0 auto 1rem auto' }} />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
@@ -704,7 +734,7 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
       )}
 
       {/* NỘI DUNG CHI TIẾT 5 KHÂU KHI ĐÃ CÓ DỮ LIỆU */}
-      {analysisData && analysisData.hasData && (
+      {!analyzing && !loading && analysisData && analysisData.hasData && (
         <div>
 
           {/* ========================================================= */}

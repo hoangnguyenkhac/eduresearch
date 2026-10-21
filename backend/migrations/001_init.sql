@@ -32,12 +32,16 @@ CREATE TABLE IF NOT EXISTS surveys (
   variables TEXT NOT NULL,
   questions TEXT,
   hypotheses TEXT,
+  audience TEXT,
+  subtitle TEXT,
+  institution TEXT DEFAULT 'Cơ sở giáo dục đại học',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_surveys_status ON surveys(status);
 CREATE INDEX IF NOT EXISTS idx_surveys_created_at ON surveys(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_surveys_audience ON surveys(audience);
 
 -- 3. Responses Table
 CREATE TABLE IF NOT EXISTS responses (
@@ -46,6 +50,7 @@ CREATE TABLE IF NOT EXISTS responses (
   role TEXT NOT NULL,
   unit TEXT NOT NULL,
   gender TEXT NOT NULL,
+  institution TEXT,
   time_taken TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('valid', 'invalid')),
   answers JSONB DEFAULT '{}',

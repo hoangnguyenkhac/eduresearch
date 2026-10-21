@@ -20,14 +20,27 @@ pool.on('error', (err) => {
   console.error('[PG POOL ERROR]', err.message, err.stack);
 });
 
-// Kiểm tra kết nối DB ngay khi khởi động để log rõ ràng trên Render
+// Kiểm tra kết nối DB ngay khi khởi động và tự động đồng bộ schema trên Supabase
 if (process.env.DATABASE_URL) {
   pool.connect((err, client, release) => {
     if (err) {
       console.error('❌ [DATABASE CONNECTION ERROR]:', err.message);
     } else {
       console.log('✅ [DATABASE CONNECTED]: Successfully connected to PostgreSQL (Supabase)!');
-      release();
+      // Tự động kiểm tra và thêm các cột mới cho surveys và responses nếu chưa có
+      client.query(`
+        ALTER TABLE surveys ADD COLUMN IF NOT EXISTS audience TEXT;
+        ALTER TABLE surveys ADD COLUMN IF NOT EXISTS subtitle TEXT;
+        ALTER TABLE surveys ADD COLUMN IF NOT EXISTS institution TEXT DEFAULT 'Cơ sở giáo dục đại học';
+        ALTER TABLE responses ADD COLUMN IF NOT EXISTS institution TEXT;
+      `, (migErr) => {
+        release();
+        if (migErr) {
+          console.warn('[PG SCHEMA SYNC WARNING]:', migErr.message);
+        } else {
+          console.log('✅ [PG SCHEMA SYNC]: Supabase tables up to date.');
+        }
+      });
     }
   });
 } else {

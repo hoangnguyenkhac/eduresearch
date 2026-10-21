@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { query } = require('../config/dbPostgres');
+const { query } = require('../config/db');
 const { SECRET_KEY } = require('../middlewares/auth');
 const { validatePassword } = require('../middlewares/validatePassword');
 

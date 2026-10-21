@@ -1,4 +1,4 @@
-const { query } = require('../config/dbPostgres');
+const { query } = require('../config/db');
 const { uploadFile, deleteFile, getSignedUrl } = require('../config/supabase');
 
 // Lấy danh sách tài liệu

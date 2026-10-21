@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { validatePassword } = require('../middlewares/validatePassword');
-const { query } = require('../config/dbPostgres');
+const { query } = require('../config/db');
 
 // Lấy danh sách người dùng
 exports.getUsers = async (req, res) => {

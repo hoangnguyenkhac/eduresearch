@@ -250,25 +250,50 @@ if (usePostgres) {
       if (typeof params === 'function') { cb = params; params = []; }
       sqliteDb.run(sql, params, cb);
     },
+    prepare: (...args) => sqliteDb.prepare(...args),
+    serialize: (fn) => sqliteDb.serialize(fn),
 
     // Promise-based API for dbPostgres compatibility
-    query: (sql, params) => {
+    query: (sql, params = []) => {
       return new Promise((resolve, reject) => {
-        const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
-        const isInsert = sql.trim().toUpperCase().startsWith('INSERT');
+        // Convert PostgreSQL $1, $2... to SQLite ?, and NOW() to CURRENT_TIMESTAMP
+        let sqliteSql = sql.replace(/\$\d+/g, '?').replace(/\bNOW\(\)/gi, "datetime('now')");
+        const isSelect = sqliteSql.trim().toUpperCase().startsWith('SELECT');
+        const isInsert = sqliteSql.trim().toUpperCase().startsWith('INSERT');
         
         if (isSelect) {
-          sqliteDb.all(sql, params, (err, rows) => {
+          sqliteDb.all(sqliteSql, params, (err, rows) => {
             if (err) reject(err);
-            else resolve({ rows, rowCount: rows.length });
+            else resolve({ rows: rows || [], rowCount: (rows || []).length });
           });
-        } else if (isInsert && sql.includes('RETURNING')) {
-          sqliteDb.run(sql, params, function(err) {
-            if (err) reject(err);
-            else resolve({ rows: [{ id: this.lastID }], rowCount: this.changes });
+        } else if (isInsert && /RETURNING/i.test(sqliteSql)) {
+          const matchTable = sqliteSql.match(/INTO\s+([^\s(]+)/i);
+          const tableName = matchTable ? matchTable[1] : null;
+          const cleanSql = sqliteSql.replace(/\s+RETURNING\s+[^;]+/i, '').trim();
+          
+          sqliteDb.run(cleanSql, params, function(err) {
+            if (err) return reject(err);
+            const lastID = this.lastID;
+            const changes = this.changes;
+            if (tableName) {
+              sqliteDb.get(`SELECT * FROM ${tableName} WHERE id = ?`, [lastID], (getErr, row) => {
+                resolve({ rows: row ? [row] : [{ id: lastID }], rowCount: changes });
+              });
+            } else {
+              resolve({ rows: [{ id: lastID }], rowCount: changes });
+            }
+          });
+        } else if (/UPDATE/i.test(sqliteSql) && /RETURNING/i.test(sqliteSql)) {
+          const matchTable = sqliteSql.match(/UPDATE\s+([^\s]+)/i);
+          const tableName = matchTable ? matchTable[1] : null;
+          const cleanSql = sqliteSql.replace(/\s+RETURNING\s+[^;]+/i, '').trim();
+          
+          sqliteDb.run(cleanSql, params, function(err) {
+            if (err) return reject(err);
+            resolve({ rows: [], rowCount: this.changes });
           });
         } else {
-          sqliteDb.run(sql, params, function(err) {
+          sqliteDb.run(sqliteSql, params, function(err) {
             if (err) reject(err);
             else resolve({ rows: [], rowCount: this.changes, lastID: this.lastID });
           });

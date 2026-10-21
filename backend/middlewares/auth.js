@@ -25,8 +25,7 @@ const authenticateToken = (req, res, next) => {
   jwt.verify(token, SECRET_KEY, (err, user) => {
     if (err) return res.status(403).json({ error: 'Token không hợp lệ hoặc đã hết hạn.' });
 
-    // Kiểm tra tính hợp lệ của phiên đăng nhập qua token_version (H5)
-    const { query } = require('../config/dbPostgres');
+    const { query } = require('../config/db');
     query('SELECT id, role, token_version FROM users WHERE id = $1', [user.id])
       .then(({ rows }) => {
         const dbUser = rows[0];

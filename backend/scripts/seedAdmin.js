@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { query } = require('../config/dbPostgres');
+const { query } = require('../config/db');
 
 async function seedAdmin() {
   try {

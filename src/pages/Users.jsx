@@ -35,11 +35,6 @@ const Users = () => {
     setTimeout(() => setToast({ message: '', type: 'success' }), 3000);
   };
 
-  // Protect route
-  if (currentUser?.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-
   const fetchUsers = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -55,8 +50,15 @@ const Users = () => {
   };
 
   useEffect(() => {
-    fetchUsers(!!cachedUsers);
-  }, []);
+    if (currentUser?.role === 'admin') {
+      fetchUsers(!!cachedUsers);
+    }
+  }, [currentUser]);
+
+  // Protect route
+  if (currentUser?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
 
   const handleOpenCreate = () => {
     setFormData({

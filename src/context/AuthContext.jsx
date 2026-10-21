@@ -10,6 +10,22 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
+  const logout = () => {
+    setCurrentUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+  };
+
+  const login = (userData, authToken) => {
+    setCurrentUser(userData);
+    setToken(authToken);
+    localStorage.setItem('token', authToken);
+  };
+
+  const updateCurrentUser = (userData) => {
+    setCurrentUser(prev => ({ ...prev, ...userData }));
+  };
+
   useEffect(() => {
     // Check if token exists and fetch user profile
     const fetchUser = async () => {
@@ -31,22 +47,6 @@ export const AuthProvider = ({ children }) => {
 
     fetchUser();
   }, [token]);
-
-  const login = (userData, authToken) => {
-    setCurrentUser(userData);
-    setToken(authToken);
-    localStorage.setItem('token', authToken);
-  };
-
-  const logout = () => {
-    setCurrentUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-  };
-
-  const updateCurrentUser = (userData) => {
-    setCurrentUser(prev => ({ ...prev, ...userData }));
-  };
 
   return (
     <AuthContext.Provider value={{ currentUser, token, login, logout, updateCurrentUser, loading }}>

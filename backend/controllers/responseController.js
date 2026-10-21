@@ -127,35 +127,58 @@ exports.createResponse = (req, res) => {
     institution = 'Trường Đại học',
     gender = 'Không nêu',
     time_taken = '3p 15s',
-    status = 'valid',
+    status,
     answers = {}
   } = req.body;
 
-  const isoDate = normalizeToIsoDate(req.body.date);
-  const displayDate = formatDisplayDate(isoDate);
-  const answersJson = typeof answers === 'object' ? JSON.stringify(answers) : (answers || '{}');
+  // 1. Kiểm tra khảo sát tồn tại
+  db.get(`SELECT id FROM surveys WHERE id = ?`, [survey_id], (sErr, survey) => {
+    if (sErr) return res.status(500).json({ error: sErr.message });
+    if (!survey) return res.status(404).json({ error: 'Khảo sát không tồn tại.' });
 
-  const sql = `INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    // 2. Tự động nhận diện Speeder (< 15s)
+    let calculatedStatus = status || 'valid';
+    let totalSeconds = 0;
+    if (typeof time_taken === 'string') {
+      const minMatch = time_taken.match(/(\d+)\s*p/);
+      const secMatch = time_taken.match(/(\d+)\s*s/);
+      if (minMatch) totalSeconds += parseInt(minMatch[1], 10) * 60;
+      if (secMatch) totalSeconds += parseInt(secMatch[1], 10);
+      if (!minMatch && !secMatch) {
+        const numOnly = parseInt(time_taken, 10);
+        if (!isNaN(numOnly)) totalSeconds = numOnly;
+      }
+      if (totalSeconds > 0 && totalSeconds < 15) {
+        calculatedStatus = 'invalid';
+      }
+    }
 
-  db.run(sql, [survey_id, role, unit, institution, gender, time_taken, status, answersJson, isoDate], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
+    const isoDate = normalizeToIsoDate(req.body.date);
+    const displayDate = formatDisplayDate(isoDate);
+    const answersJson = typeof answers === 'object' ? JSON.stringify(answers) : (answers || '{}');
 
-    const newId = this.lastID;
-    // Tự động tăng responses_count của khảo sát tương ứng
-    db.run(`UPDATE surveys SET responses_count = responses_count + 1 WHERE id = ?`, [survey_id]);
+    const sql = `INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    res.status(201).json({
-      id: newId,
-      survey_id,
-      role,
-      unit,
-      institution,
-      gender,
-      time_taken,
-      status,
-      answers: typeof answers === 'object' ? answers : {},
-      date: displayDate
+    db.run(sql, [survey_id, role, unit, institution, gender, time_taken, calculatedStatus, answersJson, isoDate], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const newId = this.lastID;
+      // Tự động tăng responses_count của khảo sát tương ứng
+      db.run(`UPDATE surveys SET responses_count = responses_count + 1 WHERE id = ?`, [survey_id]);
+
+      res.status(201).json({
+        id: newId,
+        survey_id,
+        role,
+        unit,
+        institution,
+        gender,
+        time_taken,
+        status: calculatedStatus,
+        answers: typeof answers === 'object' ? answers : {},
+        date: displayDate
+      });
     });
   });
 };

@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Filter, MessageSquare, CheckCircle, XCircle, Trash2, Eye, X, ExternalLink, Sparkles, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { Download, Upload, Filter, MessageSquare, CheckCircle, XCircle, Trash2, Eye, X, ExternalLink, Sparkles, AlertTriangle, FileSpreadsheet, Building2, School } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { responsesAPI, surveysAPI } from '../services/api';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import Toast from '../components/Toast';
-import { SkeletonStatCard, SkeletonChart, SkeletonTableRows } from '../components/Skeleton';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6B7280'];
-
-const cachedResponsesMap = new Map();
 
 const Responses = () => {
   const { currentUser } = useAuth();
@@ -18,8 +15,9 @@ const Responses = () => {
   const [data, setData] = useState({ list: [], stats: { total: 0, valid: 0, invalid: 0 }, charts: { roleData: [], genderData: [] } });
   const [loading, setLoading] = useState(true);
 
-  // Status Filter
+  // Status & Institution Filters
   const [statusFilter, setStatusFilter] = useState('all'); // all, valid, invalid
+  const [institutionFilter, setInstitutionFilter] = useState('all');
 
   // Bulk Selection
   const [selectedIds, setSelectedIds] = useState([]);
@@ -33,6 +31,7 @@ const Responses = () => {
   const [parsedImportData, setParsedImportData] = useState([]);
   const [importText, setImportText] = useState('');
   const [importing, setImporting] = useState(false);
+  const [importSurveyId, setImportSurveyId] = useState('');
 
   // Toast
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -57,31 +56,22 @@ const Responses = () => {
     fetchSurveysList();
   }, []);
 
-  // Fetch responses when selected survey changes (or all responses if selectedSurveyId is empty)
-  const fetchResponses = async (surveyId = selectedSurveyId, silent = false) => {
+  // Fetch responses when selected survey changes
+  const fetchResponses = async () => {
     try {
-      if (!silent) setLoading(true);
-      const result = await responsesAPI.getBySurvey(surveyId || '');
-      setData(result || { list: [], stats: { total: 0, valid: 0, invalid: 0 }, charts: { roleData: [], genderData: [] } });
-      cachedResponsesMap.set(surveyId || 'all', result);
+      setLoading(true);
+      const result = await responsesAPI.getBySurvey(selectedSurveyId);
+      setData(result);
     } catch (error) {
       console.error('Error fetching responses:', error);
-      if (!silent) showToast('Không thể tải dữ liệu phản hồi', 'error');
+      showToast('Không thể tải dữ liệu phản hồi', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const key = selectedSurveyId || 'all';
-    const cached = cachedResponsesMap.get(key);
-    if (cached) {
-      setData(cached);
-      setLoading(false);
-      fetchResponses(selectedSurveyId, true);
-    } else {
-      fetchResponses(selectedSurveyId, false);
-    }
+    fetchResponses();
   }, [selectedSurveyId]);
 
   const handleDeleteResponse = async (id) => {
@@ -101,10 +91,11 @@ const Responses = () => {
       return;
     }
 
-    const headers = ['Mã phản hồi', 'Khảo sát ID', 'Đối tượng', 'Đơn vị', 'Giới tính', 'Thời gian làm bài', 'Trạng thái', 'Ngày nhận'];
+    const headers = ['Mã phản hồi', 'Khảo sát ID', 'Trường / Cơ sở', 'Đối tượng / Chức vụ', 'Khoa / Đơn vị', 'Giới tính', 'Thời gian làm bài', 'Trạng thái', 'Ngày nhận'];
     const rows = data.list.map(r => [
       `#${r.id}`,
       r.survey_id,
+      `"${r.institution || 'Cơ sở giáo dục'}"`,
       `"${r.role}"`,
       `"${r.unit}"`,
       `"${r.gender}"`,
@@ -203,9 +194,9 @@ const Responses = () => {
 
   // Tải file mẫu CSV
   const handleDownloadTemplate = () => {
-    const headers = 'role,unit,gender,time_taken,status,SP1,SP2,SP3,SP4,LD1,LD2,LD3,LD4,DX1,DX2,DX3,DX4,AT1,AT2,AT3,AT4,TXT_BARRIER,TXT_SUGGESTION';
-    const sampleRow1 = 'Giảng viên,Khoa Công nghệ Thông tin,Nam,4 phút 20 giây,valid,4,4,5,4,5,4,4,5,4,4,4,5,4,5,4,4,"Đường truyền Wifi thỉnh thoảng chập chờn","Nâng cấp hạ tầng mạng"';
-    const sampleRow2 = 'Cán bộ QL,Phòng Đào tạo,Nữ,5 phút 10 giây,valid,5,5,4,5,5,5,4,5,5,4,5,5,5,5,5,4,"Hệ thống LMS cần đồng bộ điểm tự động","Mở các lớp tập huấn kỹ năng số"';
+    const headers = 'role,unit,institution,gender,time_taken,status,STR1,STR2,LEA1,LEA2,CAP1,CAP2,RES1,RES2,SER1,REA1,TXT_BARRIER,TXT_SUGGESTION';
+    const sampleRow1 = 'Trưởng Khoa,Khoa CNTT,Trường Đại học Sư phạm Hà Nội,Nam,4 phút 20 giây,valid,4,4,5,4,5,4,4,5,4,4,"Cần nâng cấp hạ tầng mạng","Mở thêm các khóa tập huấn kỹ năng số"';
+    const sampleRow2 = 'Giảng viên,Khoa Kinh tế,Trường Đại học Sư phạm Hà Nội,Nữ,5 phút 10 giây,valid,5,5,4,5,5,5,4,5,5,5,"Hệ thống LMS cần đồng bộ điểm tự động","Cải tiến quy trình số hóa"';
     const csvContent = '\uFEFF' + [headers, sampleRow1, sampleRow2].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -218,7 +209,8 @@ const Responses = () => {
 
   // Parse CSV text sang danh sách đối tượng
   const parseCSVText = (text) => {
-    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+    const cleanText = text.replace(/^\uFEFF/, '');
+    const lines = cleanText.split(/\r?\n/).filter(line => line.trim().length > 0);
     if (lines.length < 2) return [];
     
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
@@ -241,7 +233,7 @@ const Responses = () => {
       
       headers.forEach((h, idx) => {
         const val = values[idx] || '';
-        if (['role', 'unit', 'gender', 'time_taken', 'status'].includes(h)) {
+        if (['role', 'unit', 'institution', 'gender', 'time_taken', 'status'].includes(h)) {
           rowObj[h] = val;
         } else if (h) {
           const num = Number(val);
@@ -252,6 +244,7 @@ const Responses = () => {
       rowObj.answers = answersObj;
       if (!rowObj.role) rowObj.role = 'Người tham gia';
       if (!rowObj.unit) rowObj.unit = 'Đơn vị khảo sát';
+      if (!rowObj.institution) rowObj.institution = 'Cơ sở giáo dục đại học';
       if (!rowObj.status) rowObj.status = 'valid';
       if (!rowObj.time_taken) rowObj.time_taken = '3 phút';
       
@@ -275,8 +268,9 @@ const Responses = () => {
   };
 
   const handleConfirmImport = async () => {
-    if (!selectedSurveyId) {
-      showToast('Vui lòng chọn khảo sát trước khi nhập dữ liệu', 'error');
+    const targetSurveyId = importSurveyId || (selectedSurveyId && selectedSurveyId !== 'all' ? selectedSurveyId : '');
+    if (!targetSurveyId) {
+      showToast('Vui lòng chọn khảo sát đích trước khi nhập dữ liệu', 'error');
       return;
     }
     if (parsedImportData.length === 0) {
@@ -285,12 +279,16 @@ const Responses = () => {
     }
     try {
       setImporting(true);
-      await responsesAPI.import(selectedSurveyId, parsedImportData);
-      showToast(`Đã nhập thành công ${parsedImportData.length} phiếu phản hồi vào hệ thống!`);
+      const res = await responsesAPI.import(targetSurveyId, parsedImportData);
+      showToast(res?.message || `Đã nhập thành công ${parsedImportData.length} phiếu phản hồi vào hệ thống!`);
       setShowImportModal(false);
       setParsedImportData([]);
       setImportText('');
-      fetchResponses();
+      if (selectedSurveyId === targetSurveyId || !selectedSurveyId || selectedSurveyId === 'all') {
+        fetchResponses();
+      } else {
+        setSelectedSurveyId(targetSurveyId);
+      }
     } catch (err) {
       showToast(err.message || 'Lỗi khi nhập dữ liệu', 'error');
     } finally {
@@ -298,9 +296,12 @@ const Responses = () => {
     }
   };
 
+  const uniqueInstitutions = Array.from(new Set(data.list.map(r => r.institution).filter(Boolean)));
+
   const filteredList = data.list.filter(r => {
-    if (statusFilter === 'all') return true;
-    return r.status === statusFilter;
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (institutionFilter !== 'all' && (r.institution || '') !== institutionFilter) return false;
+    return true;
   });
 
   const getStatusBadge = (status) => {
@@ -316,7 +317,7 @@ const Responses = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Phản hồi khảo sát</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Dữ liệu phiếu thu thập trực tuyến &amp; Quản lý làm sạch dữ liệu thực địa</p>
+          <p style={{ color: 'var(--text-muted)' }}>Dữ liệu phiếu thu thập trực tuyến theo trường/đơn vị &amp; Quản lý làm sạch dữ liệu</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <select 
@@ -330,6 +331,19 @@ const Responses = () => {
               <option key={s.id} value={s.id}>
                 #{s.id} - {s.title}
               </option>
+            ))}
+          </select>
+
+          {/* LỌC THEO TRƯỜNG / CƠ SỞ */}
+          <select 
+            className="input"
+            style={{ backgroundColor: '#F9FAFB', border: '1px solid var(--border-color)', minWidth: '180px' }}
+            value={institutionFilter}
+            onChange={(e) => setInstitutionFilter(e.target.value)}
+          >
+            <option value="all">Tất cả Trường / Đơn vị</option>
+            {uniqueInstitutions.map(inst => (
+              <option key={inst} value={inst}>{inst}</option>
             ))}
           </select>
 
@@ -355,12 +369,30 @@ const Responses = () => {
             Lọc sạch dữ liệu ({suspectResponses.length})
           </button>
 
+          {/* CHUYỂN SANG PHÂN TÍCH 5 KHÂU */}
+          <Link 
+            to={`/analytics?surveyId=${selectedSurveyId || ''}`}
+            className="btn btn-outline"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', color: '#166534', fontWeight: '600', textDecoration: 'none' }}
+            title="Chuyển sang phân tích thống kê 5 khâu chuẩn APA 7th Edition"
+          >
+            <Sparkles size={16} />
+            Phân tích 5 khâu APA 7
+          </Link>
+
+
           {/* NÚT NHẬP EXCEL / CSV */}
           {currentUser?.role !== 'viewer' && (
             <button 
               className="btn btn-outline"
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              onClick={() => setShowImportModal(true)}
+              onClick={() => {
+                const initId = (selectedSurveyId && selectedSurveyId !== 'all')
+                  ? selectedSurveyId
+                  : (surveys.length > 0 ? surveys[0].id.toString() : '');
+                setImportSurveyId(initId);
+                setShowImportModal(true);
+              }}
             >
               <Upload size={16} /> 
               Nhập Excel/CSV
@@ -374,38 +406,10 @@ const Responses = () => {
         </div>
       </div>
 
-      {loading && data.list.length === 0 ? (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem', marginBottom: '2rem' }}>
-            <SkeletonChart height="240px" />
-            <SkeletonChart height="240px" />
-          </div>
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="table-container">
-              <table className="table" style={{ fontSize: '0.875rem' }}>
-                <thead style={{ backgroundColor: '#F9FAFB' }}>
-                  <tr>
-                    <th style={{ width: '40px', textAlign: 'center' }} />
-                    <th style={{ width: '60px' }}>Mã #</th>
-                    <th>Đối tượng</th>
-                    <th>Đơn vị</th>
-                    <th>Giới tính</th>
-                    <th>Thời gian hoàn thành</th>
-                    <th>Ngày gửi</th>
-                    <th>Trạng thái</th>
-                    <th style={{ textAlign: 'right' }}>Thao tác</th>
-                  </tr>
-                </thead>
-                <SkeletonTableRows columns={9} rows={5} />
-              </table>
-            </div>
-          </div>
-        </>
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+          <div style={{ color: 'var(--text-muted)' }}>Đang tải dữ liệu phản hồi...</div>
+        </div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -488,24 +492,12 @@ const Responses = () => {
               </div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>Chưa có phản hồi nào</h3>
               <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '420px' }}>
-                {surveys.length === 0 
-                  ? 'Hệ thống chưa có bảng hỏi khảo sát nào. Hãy tạo bảng hỏi khảo sát đầu tiên để bắt đầu thu thập dữ liệu!' 
-                  : 'Khảo sát này chưa có phiếu trả lời nào. Bạn có thể mở biểu mẫu trực tuyến để điền thử nghiệm hoặc chia sẻ đường dẫn cho đối tượng nghiên cứu.'}
+                Khảo sát này chưa có phiếu trả lời nào. Bạn có thể mở biểu mẫu trực tuyến để điền thử nghiệm hoặc chia sẻ đường dẫn cho đối tượng nghiên cứu.
               </p>
-              {surveys.length === 0 ? (
-                <Link to="/surveys" className="btn btn-primary">
-                  Tạo bảng hỏi ngay
-                </Link>
-              ) : (
-                <Link 
-                  to={`/survey/${selectedSurveyId || (surveys[0]?.id || 1)}`} 
-                  className="btn btn-primary" 
-                  target="_blank"
-                >
-                  <ExternalLink size={16} />
-                  Mở khảo sát trực tuyến
-                </Link>
-              )}
+              <Link to="/survey/1" className="btn btn-primary" target="_blank">
+                <ExternalLink size={16} />
+                Mở khảo sát trực tuyến
+              </Link>
             </div>
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -574,6 +566,7 @@ const Responses = () => {
                         />
                       </th>
                       <th style={{ width: '60px' }}>Mã #</th>
+                      <th>Trường / Cơ sở</th>
                       <th>Đối tượng</th>
                       <th>Đơn vị</th>
                       <th>Giới tính</th>
@@ -595,6 +588,12 @@ const Responses = () => {
                           />
                         </td>
                         <td style={{ fontWeight: '600', color: 'var(--text-muted)' }}>#{res.id}</td>
+                        <td>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: '600', padding: '0.15rem 0.45rem', backgroundColor: '#F3E8FF', color: '#6B21A8', borderRadius: '4px' }}>
+                            <Building2 size={12} />
+                            {res.institution || 'Cơ sở giáo dục'}
+                          </span>
+                        </td>
                         <td style={{ fontWeight: '600' }}>{res.role}</td>
                         <td>{res.unit}</td>
                         <td>{res.gender}</td>
@@ -646,19 +645,26 @@ const Responses = () => {
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Khảo sát ID</div>
-                  <div style={{ fontWeight: '600' }}>Khảo sát #{viewResponse.survey_id}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Trường / Cơ sở đào tạo</div>
+                  <div style={{ fontWeight: '700', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Building2 size={14} />
+                    {viewResponse.institution || 'Cơ sở giáo dục đại học'}
+                  </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Trạng thái</div>
                   <div>{getStatusBadge(viewResponse.status)}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Đối tượng</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Khảo sát ID</div>
+                  <div style={{ fontWeight: '600' }}>Khảo sát #{viewResponse.survey_id}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Đối tượng / Chức vụ</div>
                   <div style={{ fontWeight: '600' }}>{viewResponse.role}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Đơn vị / Khoa</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Đơn vị / Khoa phòng</div>
                   <div style={{ fontWeight: '600' }}>{viewResponse.unit}</div>
                 </div>
                 <div>
@@ -669,7 +675,7 @@ const Responses = () => {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Thời gian thực hiện</div>
                   <div style={{ fontWeight: '600' }}>{viewResponse.time_taken}</div>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Thời điểm nhận phiếu</div>
                   <div style={{ fontWeight: '600' }}>{viewResponse.date}</div>
                 </div>
@@ -885,23 +891,27 @@ const Responses = () => {
                 </div>
               </div>
 
-              {/* CHỌN KHẢO SÁT NHẬN DỮ LIỆU */}
+              {/* CHỌN KHẢO SÁT TIẾP NHẬN DỮ LIỆU */}
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                  Khảo sát nhận dữ liệu phản hồi:
+                  Khảo sát tiếp nhận dữ liệu phản hồi: <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <select 
                   className="input" 
-                  value={selectedSurveyId || (surveys[0]?.id ? surveys[0].id.toString() : '')} 
-                  onChange={(e) => setSelectedSurveyId(e.target.value)}
-                  style={{ backgroundColor: '#F9FAFB', fontWeight: '600', color: 'var(--primary)' }}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', backgroundColor: '#F8FAFC' }}
+                  value={importSurveyId}
+                  onChange={(e) => setImportSurveyId(e.target.value)}
                 >
+                  <option value="" disabled>-- Vui lòng chọn khảo sát đích --</option>
                   {surveys.map(s => (
-                    <option key={s.id} value={s.id.toString()}>
-                      #{s.id} - {s.title} ({s.responses_count} phản hồi hiện tại)
+                    <option key={s.id} value={s.id}>
+                      #{s.id} - {s.title} ({s.institution || 'Chung'})
                     </option>
                   ))}
                 </select>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Tất cả các câu trả lời trong file CSV sẽ được nhập vào khảo sát này.
+                </div>
               </div>
 
               {/* KHUNG TẢI FILE */}
@@ -958,7 +968,7 @@ const Responses = () => {
               </button>
               <button 
                 className="btn btn-primary"
-                disabled={parsedImportData.length === 0 || importing}
+                disabled={parsedImportData.length === 0 || importing || !importSurveyId}
                 onClick={handleConfirmImport}
               >
                 {importing ? 'Đang nhập...' : `Xác nhận nhập (${parsedImportData.length} phiếu)`}

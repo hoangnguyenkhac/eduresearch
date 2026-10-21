@@ -1,47 +1,173 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Share2, Trash2, BarChart2, X, AlertTriangle, FileSpreadsheet, ListPlus, Sparkles, CheckCircle, QrCode, Copy, Eye, Download, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Edit, Share2, Trash2, BarChart2, X, AlertTriangle, FileSpreadsheet, ListPlus, Sparkles, CheckCircle, QrCode, Copy, Eye, Download, Check, Building2, Users, GraduationCap, Briefcase, Filter } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
 import { surveysAPI } from '../services/api';
 import Toast from '../components/Toast';
-import { SkeletonTableRows } from '../components/Skeleton';
 
-// Ngân hàng câu hỏi chuẩn hóa theo từng biến nghiên cứu
-const SAMPLE_QUESTIONS = {
-  'SP': [
-    { code: 'SP1', text: 'Nhà trường có chiến lược chuyển đổi số rõ ràng và khả thi.', variable: 'SP', type: 'likert' },
-    { code: 'SP2', text: 'Kế hoạch triển khai công nghệ được phổ biến rộng rãi tới mọi thành viên.', variable: 'SP', type: 'likert' },
-    { code: 'SP3', text: 'Nguồn lực tài chính và hạ tầng được phân bổ hợp lý cho việc số hóa.', variable: 'SP', type: 'likert' },
-    { code: 'SP4', text: 'Chiến lược số được cập nhật và điều chỉnh định kỳ theo thực tế.', variable: 'SP', type: 'likert' }
-  ],
-  'LD': [
-    { code: 'LD1', text: 'Ban lãnh đạo luôn tiên phong và quyết liệt trong đổi mới công nghệ.', variable: 'LD', type: 'likert' },
-    { code: 'LD2', text: 'Cán bộ quản lý khuyến khích áp dụng các sáng kiến số mới.', variable: 'LD', type: 'likert' },
-    { code: 'LD3', text: 'Đơn vị có cơ chế khen thưởng đối với các giải pháp số hiệu quả.', variable: 'LD', type: 'likert' },
-    { code: 'LD4', text: 'Lãnh đạo hỗ trợ giải quyết kịp thời các khó khăn khi áp dụng công nghệ.', variable: 'LD', type: 'likert' }
-  ],
-  'DX': [
-    { code: 'DX1', text: 'Quy trình công việc và học tập được số hóa và chuẩn hóa đồng bộ.', variable: 'DX', type: 'likert' },
-    { code: 'DX2', text: 'Hệ thống dữ liệu được kết nối và chia sẻ liên thông giữa các phòng ban.', variable: 'DX', type: 'likert' },
-    { code: 'DX3', text: 'Nhân sự và sinh viên được đào tạo kỹ năng số đầy đủ và thường xuyên.', variable: 'DX', type: 'likert' },
-    { code: 'DX4', text: 'Các ứng dụng số giúp nâng cao năng suất và chất lượng hoạt động.', variable: 'DX', type: 'likert' }
-  ],
-  'AT': [
-    { code: 'AT1', text: 'Đơn vị thích ứng linh hoạt trước những thay đổi nhanh chóng của công nghệ.', variable: 'AT', type: 'likert' },
-    { code: 'AT2', text: 'Mức độ sẵn sàng làm việc trên môi trường số của cán bộ đạt mức cao.', variable: 'AT', type: 'likert' },
-    { code: 'AT3', text: 'Người tham gia tự tin làm chủ và xử lý hiệu quả các nền tảng số.', variable: 'AT', type: 'likert' },
-    { code: 'AT4', text: 'Hiệu quả nghiên cứu và công tác chung tăng rõ rệt nhờ chuyển đổi số.', variable: 'AT', type: 'likert' }
-  ]
+// 4 MẪU BỘ CÂU HỎI CHUẨN THEO CHỨC VỤ
+const ROLE_QUESTIONNAIRES = {
+  leadership: {
+    code: 'leadership',
+    roleName: 'Ban Giám hiệu & Hội đồng trường',
+    badgeColor: '#1E3A8A',
+    badgeBg: '#DBEAFE',
+    icon: Building2,
+    defaultTitle: 'Bộ 1: Ban Giám hiệu & Hội đồng trường — Chiến lược, thể chế và quản trị số vĩ mô',
+    subtitle: 'Đánh giá ở tầm vĩ mô: Thể chế, chiến lược, quản trị số, phân bổ nguồn lực và lợi thế cạnh tranh tổng thể',
+    variables: 'STR, LEA, CAP, RES, SER, REA',
+    defaultTarget: 50,
+    questions: [
+      { code: 'STR1', text: 'Nhà trường đã xây dựng chiến lược phát triển tổng thể, tích hợp rõ ràng các xu hướng số hóa và chuyển đổi giáo dục đại học.', variable: 'STR', type: 'likert', group: '1. Chiến lược & Thể chế vĩ mô (STR)' },
+      { code: 'STR2', text: 'Kế hoạch chiến lược của nhà trường được rà soát, định kỳ điều chỉnh linh hoạt theo sự biến động của môi trường giáo dục.', variable: 'STR', type: 'likert', group: '1. Chiến lược & Thể chế vĩ mô (STR)' },
+      { code: 'LEA1', text: 'Hội đồng trường / Ban Giám hiệu thể hiện tầm nhìn và năng lực lãnh đạo số mạnh mẽ trong chỉ đạo và điều hành.', variable: 'LEA', type: 'likert', group: '2. Năng lực Lãnh đạo số (LEA)' },
+      { code: 'LEA2', text: 'Nhà trường ban hành các cơ chế, thể chế quản trị linh hoạt, phân cấp mạnh mẽ cho các đơn vị để tạo sự chủ động.', variable: 'LEA', type: 'likert', group: '2. Năng lực Lãnh đạo số (LEA)' },
+      { code: 'CAP1', text: 'Cơ cấu tổ chức của nhà trường có khả năng tái cấu trúc và thích ứng nhanh trước các mô hình đào tạo mới.', variable: 'CAP', type: 'likert', group: '3. Năng lực Thích ứng Tổ chức (CAP)' },
+      { code: 'RES1', text: 'Việc phân bổ ngân sách, tài chính và hạ tầng CNTT được ưu tiên gắn liền với các mục tiêu chiến lược trọng điểm.', variable: 'RES', type: 'likert', group: '4. Phân bổ Nguồn lực & Đầu tư (RES)' },
+      { code: 'RES2', text: 'Nhà trường có chính sách thu hút, phát triển và giữ chân đội ngũ nhân sự chất lượng cao đáp ứng chuẩn mực mới.', variable: 'RES', type: 'likert', group: '4. Phân bổ Nguồn lực & Đầu tư (RES)' },
+      { code: 'SER1', text: 'Nhà trường duy trì được vị thế, uy tín và lợi thế cạnh tranh bền vững so với các cơ sở giáo dục đại học khác.', variable: 'SER', type: 'likert', group: '5. Lợi thế Cạnh tranh & Uy tín (SER)' },
+      { code: 'REA1', text: 'Toàn hệ thống nhà trường đã đạt được sự sẵn sàng cao về mọi mặt để thích ứng thành công với các xu hướng giáo dục mới.', variable: 'REA', type: 'likert', group: '6. Mức độ Sẵn sàng Thích ứng (REA)' },
+      { code: 'REA2', text: 'Nhà trường có khả năng dự báo và ứng phó hiệu quả trước các rủi ro, thách thức trong quá trình chuyển đổi tổ chức.', variable: 'REA', type: 'likert', group: '6. Mức độ Sẵn sàng Thích ứng (REA)' },
+      { code: 'TXT_BARRIER_BGH', text: 'Theo Ông/Bà, đâu là rào cản lớn nhất về mặt cơ chế, thể chế hoặc nguồn lực trong quá trình chuyển đổi của nhà trường?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Ý kiến về cơ chế, thể chế, phân bổ nguồn lực...' },
+      { code: 'TXT_SUGGESTION_BGH', text: 'Ông/Bà có đề xuất định hướng chiến lược trọng tâm gì để gia tăng lợi thế cạnh tranh của nhà trường trong 3–5 năm tới?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Đề xuất định hướng chiến lược trọng tâm...' }
+    ],
+    hypotheses: [
+      { code: 'H1', name: 'STR ➔ REA', description: 'Chiến lược phát triển (STR) tác động thuận chiều đến mức độ sẵn sàng chuyển đổi (REA)', independent: 'STR', dependent: 'REA' },
+      { code: 'H2', name: 'LEA ➔ REA', description: 'Lãnh đạo số (LEA) tác động thuận chiều đến mức độ sẵn sàng chuyển đổi (REA)', independent: 'LEA', dependent: 'REA' },
+      { code: 'H3', name: 'CAP ➔ SER', description: 'Năng lực thích ứng tổ chức (CAP) có tác động tích cực đến lợi thế cạnh tranh (SER)', independent: 'CAP', dependent: 'SER' },
+      { code: 'H4', name: 'RES ➔ REA', description: 'Nguồn lực và ngân sách (RES) tác động thuận chiều đến sự sẵn sàng tổ chức (REA)', independent: 'RES', dependent: 'REA' }
+    ]
+  },
+  dept_head: {
+    code: 'dept_head',
+    roleName: 'Trưởng / Phó Khoa, Phòng / Ban',
+    badgeColor: '#065F46',
+    badgeBg: '#D1FAE5',
+    icon: Briefcase,
+    defaultTitle: 'Bộ 2: Trưởng / Phó Khoa, Phòng / Ban — Triển khai chiến lược và quy trình vận hành cấp trung',
+    subtitle: 'Đánh giá ở cấp trung: Triển khai chiến lược, quy trình vận hành, quản lý nhân sự và chất lượng dịch vụ nội bộ',
+    variables: 'STR, LEA, CAP, RES, SER, REA',
+    defaultTarget: 80,
+    questions: [
+      { code: 'STR1', text: 'Đơn vị của tôi hiểu rõ và chủ động cụ thể hóa các mục tiêu chiến lược của nhà trường thành kế hoạch hành động.', variable: 'STR', type: 'likert', group: '1. Triển khai Chiến lược tại đơn vị (STR)' },
+      { code: 'STR2', text: 'Kế hoạch hoạt động của đơn vị được liên kết chặt chẽ với các chỉ số đánh giá hiệu quả (KPIs) chung của trường.', variable: 'STR', type: 'likert', group: '1. Triển khai Chiến lược tại đơn vị (STR)' },
+      { code: 'LEA1', text: 'Lãnh đạo đơn vị tích cực hỗ trợ, tạo điều kiện cho cán bộ/giảng viên ứng dụng các phương pháp và quy trình làm việc mới.', variable: 'LEA', type: 'likert', group: '2. Lãnh đạo cấp trung & Đổi mới (LEA)' },
+      { code: 'LEA2', text: 'Lãnh đạo đơn vị thường xuyên khen thưởng, động viên các ý tưởng đổi mới sáng tạo từ cán bộ/giảng viên.', variable: 'LEA', type: 'likert', group: '2. Lãnh đạo cấp trung & Đổi mới (LEA)' },
+      { code: 'CAP1', text: 'Quy trình phối hợp công việc giữa đơn vị của tôi với các phòng/khoa/ban khác diễn ra mượt mà, giảm bớt thủ tục hành chính.', variable: 'CAP', type: 'likert', group: '3. Năng lực Quy trình & Phối hợp (CAP)' },
+      { code: 'CAP2', text: 'Đơn vị có khả năng xử lý linh hoạt và nhanh chóng các sự cố phát sinh trong quá trình vận hành.', variable: 'CAP', type: 'likert', group: '3. Năng lực Quy trình & Phối hợp (CAP)' },
+      { code: 'RES1', text: 'Trang thiết bị, phần mềm quản lý và hạ tầng công nghệ được cung cấp đầy đủ, đáp ứng tốt nhu cầu làm việc của đơn vị.', variable: 'RES', type: 'likert', group: '4. Nguồn lực & Hạ tầng đơn vị (RES)' },
+      { code: 'RES2', text: 'Cán bộ/nhân sự tại đơn vị thường xuyên được bồi dưỡng nâng cao năng lực chuyên môn và kỹ năng số.', variable: 'RES', type: 'likert', group: '4. Nguồn lực & Hạ tầng đơn vị (RES)' },
+      { code: 'SER1', text: 'Đơn vị duy trì chất lượng phục vụ/hỗ trợ cao đối với các đơn vị khác, giảng viên và người học.', variable: 'SER', type: 'likert', group: '5. Chất lượng Dịch vụ & Hỗ trợ (SER)' },
+      { code: 'REA1', text: 'Đơn vị của tôi đạt mức độ sẵn sàng cao trong việc thay đổi thói quen làm việc để đáp ứng yêu cầu chuyển đổi chung.', variable: 'REA', type: 'likert', group: '6. Mức độ Sẵn sàng Chuyển đổi (REA)' },
+      { code: 'TXT_BARRIER_DEPT', text: 'Khó khăn hoặc điểm nghẽn lớn nhất mà đơn vị của Thầy/Cô gặp phải trong quy trình vận hành và phối hợp liên phòng ban là gì?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Ý kiến về quy trình, thủ tục hành chính...' },
+      { code: 'TXT_SUGGESTION_DEPT', text: 'Thầy/Cô có đề xuất gì để cải tiến cơ chế phối hợp và phân quyền cho cấp đơn vị khoa/phòng ban hiệu quả hơn?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Đề xuất cải tiến cơ chế quản trị và phân quyền...' }
+    ],
+    hypotheses: [
+      { code: 'H1', name: 'STR ➔ CAP', description: 'Hiểu rõ chiến lược (STR) tác động tích cực đến năng lực phối hợp quy trình (CAP)', independent: 'STR', dependent: 'CAP' },
+      { code: 'H2', name: 'LEA ➔ REA', description: 'Lãnh đạo đơn vị đổi mới (LEA) thúc đẩy mức độ sẵn sàng thay đổi (REA)', independent: 'LEA', dependent: 'REA' },
+      { code: 'H3', name: 'RES ➔ SER', description: 'Hạ tầng và bồi dưỡng nhân lực (RES) tác động thuận chiều đến chất lượng phục vụ (SER)', independent: 'RES', dependent: 'SER' }
+    ]
+  },
+  lecturer_staff: {
+    code: 'lecturer_staff',
+    roleName: 'Giảng viên / Giáo viên / Nhân viên',
+    badgeColor: '#7C2D12',
+    badgeBg: '#FFEDD5',
+    icon: Users,
+    defaultTitle: 'Bộ 3: Giảng viên / Giáo viên / Nhân viên — Công cụ làm việc, phương pháp giảng dạy và văn hóa đổi mới',
+    subtitle: 'Đánh giá trực tiếp: Công cụ làm việc, phương pháp giảng dạy, văn hóa đổi mới và sự hỗ trợ từ tổ chức',
+    variables: 'STR, LEA, CAP, RES, SER, REA',
+    defaultTarget: 150,
+    questions: [
+      { code: 'STR1', text: 'Tôi được phổ biến rõ ràng về định hướng phát triển và các chiến lược chuyển đổi của nhà trường.', variable: 'STR', type: 'likert', group: '1. Nhận thức Chiến lược (STR)' },
+      { code: 'LEA1', text: 'Lãnh đạo nhà trường/khoa luôn lắng nghe, chia sẻ và đồng hành cùng giảng viên/nhân viên khi triển khai cái mới.', variable: 'LEA', type: 'likert', group: '2. Sự Đồng hành của Lãnh đạo (LEA)' },
+      { code: 'CAP1', text: 'Tôi chủ động áp dụng các phương pháp giảng dạy hiện đại, công nghệ số hoặc quy trình mới vào công việc chuyên môn.', variable: 'CAP', type: 'likert', group: '3. Năng lực Thích ứng Chuyên môn (CAP)' },
+      { code: 'CAP2', text: 'Bản thân tôi có khả năng thích ứng nhanh với các thay đổi về công nghệ và quy trình làm việc tại trường.', variable: 'CAP', type: 'likert', group: '3. Năng lực Thích ứng Chuyên môn (CAP)' },
+      { code: 'RES1', text: 'Hạ tầng CNTT, mạng Internet và phần mềm giảng dạy/quản lý của trường hoạt động ổn định và hiệu quả.', variable: 'RES', type: 'likert', group: '4. Hạ tầng & Môi trường Làm việc (RES)' },
+      { code: 'RES2', text: 'Cơ sở vật chất, phòng làm việc/giảng dạy được trang bị đầy đủ, tạo môi trường làm việc thuận lợi.', variable: 'RES', type: 'likert', group: '4. Hạ tầng & Môi trường Làm việc (RES)' },
+      { code: 'SER1', text: 'Nhà trường cung cấp các khóa đào tạo, tập huấn thiết thực giúp tôi nâng cao kỹ năng ứng dụng công nghệ/chuyển đổi.', variable: 'SER', type: 'likert', group: '5. Đào tạo & Tiếp nhận Phản hồi (SER)' },
+      { code: 'SER2', text: 'Các kênh phản hồi, góp ý của cán bộ/giảng viên được nhà trường ghi nhận và phản hồi kịp thời.', variable: 'SER', type: 'likert', group: '5. Đào tạo & Tiếp nhận Phản hồi (SER)' },
+      { code: 'REA1', text: 'Tôi sẵn sàng điều chỉnh thói quen và nâng cao năng lực cá nhân để đáp ứng các yêu cầu chuyển đổi của nhà trường.', variable: 'REA', type: 'likert', group: '6. Thái độ Sẵn sàng & Niềm tin (REA)' },
+      { code: 'REA2', text: 'Tôi tin tưởng vào sự thành công và phát triển bền vững của nhà trường trong giai đoạn chuyển đổi hiện nay.', variable: 'REA', type: 'likert', group: '6. Thái độ Sẵn sàng & Niềm tin (REA)' },
+      { code: 'TXT_BARRIER_STAFF', text: 'Thầy/Cô/Anh/Chị gặp khó khăn gì nhiều nhất về hạ tầng, công cụ số hay thời gian làm việc hiện nay?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Ý kiến về công cụ, phần mềm, thiết bị...' },
+      { code: 'TXT_SUGGESTION_STAFF', text: 'Thầy/Cô/Anh/Chị có nguyện vọng hoặc đề xuất gì về chính sách đãi ngộ, tập huấn để an tâm cống hiến tốt hơn?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Đề xuất về tập huấn, đãi ngộ và môi trường...' }
+    ],
+    hypotheses: [
+      { code: 'H1', name: 'STR ➔ REA', description: 'Nhận thức chiến lược (STR) tác động tích cực đến sự sẵn sàng đổi mới cá nhân (REA)', independent: 'STR', dependent: 'REA' },
+      { code: 'H2', name: 'LEA ➔ CAP', description: 'Sự đồng hành của lãnh đạo (LEA) thúc đẩy năng lực ứng dụng công nghệ (CAP)', independent: 'LEA', dependent: 'CAP' },
+      { code: 'H3', name: 'RES ➔ CAP', description: 'Hạ tầng và điều kiện làm việc (RES) nâng cao năng lực thích ứng chuyên môn (CAP)', independent: 'RES', dependent: 'CAP' },
+      { code: 'H4', name: 'SER ➔ REA', description: 'Tập huấn và tiếp nhận phản hồi (SER) củng cố niềm tin và sự thích ứng cá nhân (REA)', independent: 'SER', dependent: 'REA' }
+    ]
+  },
+  student_alumni: {
+    code: 'student_alumni',
+    roleName: 'Học sinh / Sinh viên / Cựu SV / Sau ĐH',
+    badgeColor: '#4C1D95',
+    badgeBg: '#EDE9FE',
+    icon: GraduationCap,
+    defaultTitle: 'Bộ 4: Người học & Cựu người học — Trải nghiệm dịch vụ đào tạo, môi trường và uy tín thương hiệu',
+    subtitle: 'Đánh giá từ góc độ thụ hưởng: Trải nghiệm người học, chất lượng dịch vụ đào tạo, môi trường và giá trị thương hiệu',
+    variables: 'SER, RES, CAP, STR, REA',
+    defaultTarget: 200,
+    questions: [
+      { code: 'SER1', text: 'Chương trình đào tạo mang tính cập nhật, thực tiễn và đáp ứng tốt nhu cầu của thị trường lao động.', variable: 'SER', type: 'likert', group: '1. Chất lượng Dịch vụ Đào tạo & Hỗ trợ (SER)' },
+      { code: 'SER2', text: 'Giảng viên sử dụng các phương pháp giảng dạy tích cực, ứng dụng công nghệ và tương tác hiệu quả với người học.', variable: 'SER', type: 'likert', group: '1. Chất lượng Dịch vụ Đào tạo & Hỗ trợ (SER)' },
+      { code: 'SER3', text: 'Các dịch vụ hành chính (xác nhận học vụ, bảng điểm, đăng ký môn học...) được thực hiện nhanh chóng, tiện lợi trên nền tảng số.', variable: 'SER', type: 'likert', group: '1. Chất lượng Dịch vụ Đào tạo & Hỗ trợ (SER)' },
+      { code: 'SER4', text: 'Các hoạt động hỗ trợ người học (tư vấn tâm lý, hướng nghiệp, học bổng...) được nhà trường thực hiện chu đáo, chuyên nghiệp.', variable: 'SER', type: 'likert', group: '1. Chất lượng Dịch vụ Đào tạo & Hỗ trợ (SER)' },
+      { code: 'RES1', text: 'Phòng học, phòng thí nghiệm, thư viện và hạ tầng Internet của trường đáp ứng tốt nhu cầu học tập và nghiên cứu.', variable: 'RES', type: 'likert', group: '2. Môi trường Cơ sở vật chất & Học liệu số (RES)' },
+      { code: 'RES2', text: 'Các nền tảng học tập trực tuyến (LMS, phần mềm học tập) hỗ trợ đắc lực cho quá trình tự học của tôi/người học.', variable: 'RES', type: 'likert', group: '2. Môi trường Cơ sở vật chất & Học liệu số (RES)' },
+      { code: 'CAP1', text: 'Nhà trường nhanh chóng tiếp thu ý kiến đóng góp của người học/cựu sinh viên để cải thiện chất lượng dịch vụ đào tạo.', variable: 'CAP', type: 'likert', group: '3. Năng lực Lắng nghe & Tiếp thu (CAP)' },
+      { code: 'STR1', text: 'Nhà trường thể hiện định hướng phát triển hiện đại, tiên phong trong ứng dụng công nghệ và đổi mới sáng tạo.', variable: 'STR', type: 'likert', group: '4. Định hướng Tiên phong Đổi mới (STR)' },
+      { code: 'REA1', text: 'Tôi nhận thấy nhà trường có khả năng thích ứng tốt và duy trì chất lượng đào tạo ổn định trước những thay đổi.', variable: 'REA', type: 'likert', group: '5. Uy tín & Sự Hài lòng Thụ hưởng (REA)' },
+      { code: 'REA2', text: 'Tôi hài lòng và tự hào về uy tín, chất lượng đào tạo của nhà trường khi học tập hoặc giới thiệu cho người khác.', variable: 'REA', type: 'likert', group: '5. Uy tín & Sự Hài lòng Thụ hưởng (REA)' },
+      { code: 'TXT_BARRIER_STUDENT', text: 'Những rào cản hoặc điểm chưa hài lòng lớn nhất mà Bạn gặp phải về dịch vụ hoặc cơ sở vật chất của trường là gì?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Ý kiến về thủ tục học vụ, Wifi, học liệu, phòng học...' },
+      { code: 'TXT_SUGGESTION_STUDENT', text: 'Bạn có mong muốn hoặc đề xuất cụ thể nào để nhà trường nâng cấp trải nghiệm học tập và hỗ trợ sinh viên tốt hơn?', variable: 'QUALITATIVE', type: 'textarea', placeholder: 'Đề xuất cải tiến dịch vụ người học và cơ sở vật chất...' }
+    ],
+    hypotheses: [
+      { code: 'H1', name: 'RES ➔ SER', description: 'Môi trường CSVC và LMS (RES) tác động thuận chiều đến chất lượng đào tạo (SER)', independent: 'RES', dependent: 'SER' },
+      { code: 'H2', name: 'SER ➔ REA', description: 'Chất lượng dịch vụ đào tạo (SER) tác động tích cực đến sự hài lòng và tự hào thương hiệu (REA)', independent: 'SER', dependent: 'REA' },
+      { code: 'H3', name: 'CAP ➔ REA', description: 'Năng lực lắng nghe phản hồi (CAP) củng cố niềm tin và sự gắn kết người học (REA)', independent: 'CAP', dependent: 'REA' }
+    ]
+  }
 };
 
-let cachedSurveys = null;
+const SAMPLE_QUESTIONS = {
+  STR: [
+    { code: 'STR1', text: 'Nhà trường đã xây dựng chiến lược phát triển tổng thể, tích hợp rõ ràng các xu hướng số hóa và chuyển đổi giáo dục đại học.', variable: 'STR', type: 'likert' },
+    { code: 'STR2', text: 'Kế hoạch chiến lược của nhà trường được rà soát, định kỳ điều chỉnh linh hoạt theo sự biến động của môi trường giáo dục.', variable: 'STR', type: 'likert' }
+  ],
+  LEA: [
+    { code: 'LEA1', text: 'Lãnh đạo thể hiện tầm nhìn và năng lực điều hành mạnh mẽ, đồng hành cùng các đơn vị trong đổi mới.', variable: 'LEA', type: 'likert' },
+    { code: 'LEA2', text: 'Nhà trường ban hành các cơ chế, thể chế quản trị linh hoạt, phân cấp mạnh mẽ tạo sự chủ động.', variable: 'LEA', type: 'likert' }
+  ],
+  CAP: [
+    { code: 'CAP1', text: 'Cơ cấu tổ chức và quy trình phối hợp công việc diễn ra mượt mà, thích ứng nhanh với các yêu cầu mới.', variable: 'CAP', type: 'likert' },
+    { code: 'CAP2', text: 'Đơn vị và cá nhân có khả năng xử lý linh hoạt và nhanh chóng các sự cố phát sinh trong vận hành.', variable: 'CAP', type: 'likert' }
+  ],
+  RES: [
+    { code: 'RES1', text: 'Trang thiết bị, hạ tầng CNTT và đường truyền mạng được đầu tư đầy đủ, hoạt động ổn định.', variable: 'RES', type: 'likert' },
+    { code: 'RES2', text: 'Đội ngũ nhân sự được bồi dưỡng nâng cao năng lực chuyên môn và kỹ năng số thường xuyên.', variable: 'RES', type: 'likert' }
+  ],
+  SER: [
+    { code: 'SER1', text: 'Dịch vụ đào tạo và hành chính được thực hiện nhanh chóng, tiện lợi trên nền tảng số.', variable: 'SER', type: 'likert' },
+    { code: 'SER2', text: 'Chất lượng phục vụ và hỗ trợ người học, giảng viên luôn được duy trì ở mức cao và chuyên nghiệp.', variable: 'SER', type: 'likert' }
+  ],
+  REA: [
+    { code: 'REA1', text: 'Toàn hệ thống đạt mức độ sẵn sàng cao trong việc thay đổi thói quen để thích ứng với yêu cầu chuyển đổi.', variable: 'REA', type: 'likert' },
+    { code: 'REA2', text: 'Có niềm tin vững chắc và sự hài lòng cao về uy tín, sự phát triển bền vững của cơ sở giáo dục.', variable: 'REA', type: 'likert' }
+  ]
+};
 
 const Surveys = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [surveys, setSurveys] = useState(cachedSurveys || []);
-  const [loading, setLoading] = useState(!cachedSurveys);
+  const [surveys, setSurveys] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Bộ lọc danh sách khảo sát theo Trường và Chức vụ
+  const [filterInstitution, setFilterInstitution] = useState('all');
+  const [filterAudience, setFilterAudience] = useState('all');
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -61,17 +187,23 @@ const Surveys = () => {
   const [currentHypotheses, setCurrentHypotheses] = useState([]);
   const [newQuestionText, setNewQuestionText] = useState('');
   const [newQuestionCode, setNewQuestionCode] = useState('');
-  const [newQuestionVar, setNewQuestionVar] = useState('SP');
+  const [newQuestionVar, setNewQuestionVar] = useState('STR');
   const [newQuestionType, setNewQuestionType] = useState('likert');
 
-  // Form states
+  // Form states cho Tạo mới / Chỉnh sửa
+  const [selectedRoleTemplate, setSelectedRoleTemplate] = useState('leadership');
   const [formData, setFormData] = useState({
     title: '',
-    questions_count: 16,
+    subtitle: '',
+    institution: 'Trường Đại học Sư phạm',
+    audience: 'leadership',
+    questions_count: 12,
     status: 'Active',
     scale: 'Likert 5',
-    target: 150,
-    variables: 'SP, LD, DX, AT'
+    target: 50,
+    variables: 'STR, LEA, CAP, RES, SER, REA',
+    questions: [],
+    hypotheses: []
   });
 
   // Toast
@@ -81,32 +213,71 @@ const Surveys = () => {
     setTimeout(() => setToast({ message: '', type: 'success' }), 3000);
   };
 
-  const fetchSurveys = async (silent = false) => {
+  const fetchSurveys = async () => {
     try {
-      if (!silent) setLoading(true);
+      setLoading(true);
       const result = await surveysAPI.getAll();
       setSurveys(result);
-      cachedSurveys = result;
     } catch (error) {
       console.error('Error fetching surveys:', error);
-      if (!silent) showToast('Không thể tải danh sách khảo sát', 'error');
+      showToast('Không thể tải danh sách khảo sát', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSurveys(!!cachedSurveys);
+    fetchSurveys();
   }, []);
 
+  // Khi chọn một template bộ câu hỏi theo chức vụ
+  const applyRoleTemplate = (roleKey, instName) => {
+    const tmpl = ROLE_QUESTIONNAIRES[roleKey];
+    setSelectedRoleTemplate(roleKey);
+    const inst = instName !== undefined ? instName : formData.institution;
+    if (tmpl) {
+      setFormData(prev => ({
+        ...prev,
+        audience: roleKey,
+        title: `${tmpl.defaultTitle} — ${inst || 'Trường Đại học'}`,
+        subtitle: tmpl.subtitle,
+        variables: tmpl.variables,
+        target: tmpl.defaultTarget,
+        questions_count: tmpl.questions.length,
+        questions: tmpl.questions,
+        hypotheses: tmpl.hypotheses
+      }));
+    } else {
+      // Custom
+      setFormData(prev => ({
+        ...prev,
+        audience: 'custom',
+        title: prev.title || `Khảo sát chuyên đề — ${inst || 'Trường Đại học'}`,
+        subtitle: 'Bảng hỏi khảo sát tự thiết kế tùy biến',
+        variables: 'STR, LEA, CAP, RES, SER, REA',
+        questions_count: 10,
+        questions: [],
+        hypotheses: []
+      }));
+    }
+  };
+
   const handleOpenCreate = () => {
+    const defaultInst = 'Trường Đại học Sư phạm';
+    const tmpl = ROLE_QUESTIONNAIRES.leadership;
+    setSelectedRoleTemplate('leadership');
     setFormData({
-      title: '',
-      questions_count: 16,
+      title: `${tmpl.defaultTitle} — ${defaultInst}`,
+      subtitle: tmpl.subtitle,
+      institution: defaultInst,
+      audience: 'leadership',
+      questions_count: tmpl.questions.length,
       status: 'Active',
       scale: 'Likert 5',
-      target: 150,
-      variables: 'SP, LD, DX, AT'
+      target: tmpl.defaultTarget,
+      variables: tmpl.variables,
+      questions: tmpl.questions,
+      hypotheses: tmpl.hypotheses
     });
     setIsCreateOpen(true);
   };
@@ -117,11 +288,15 @@ const Surveys = () => {
       showToast('Vui lòng nhập tiêu đề khảo sát', 'error');
       return;
     }
+    if (!formData.institution.trim()) {
+      showToast('Vui lòng nhập tên Trường / Đơn vị khảo sát', 'error');
+      return;
+    }
     try {
       const created = await surveysAPI.create(formData);
       setSurveys([created, ...surveys]);
       setIsCreateOpen(false);
-      showToast('Tạo khảo sát mới thành công!');
+      showToast(`Đã tạo thành công bộ khảo sát cho ${formData.institution}!`);
     } catch (err) {
       showToast(err.message || 'Lỗi khi tạo khảo sát', 'error');
     }
@@ -129,13 +304,19 @@ const Surveys = () => {
 
   const handleOpenEdit = (survey) => {
     setSelectedSurvey(survey);
+    setSelectedRoleTemplate(survey.audience || 'custom');
     setFormData({
       title: survey.title,
+      subtitle: survey.subtitle || '',
+      institution: survey.institution || 'Cơ sở giáo dục đại học',
+      audience: survey.audience || 'custom',
       questions_count: survey.questions_count,
       status: survey.status,
       scale: survey.scale,
       target: survey.target,
-      variables: Array.isArray(survey.variables) ? survey.variables.join(', ') : (survey.variables || '')
+      variables: Array.isArray(survey.variables) ? survey.variables.join(', ') : (survey.variables || ''),
+      questions: survey.questions || [],
+      hypotheses: survey.hypotheses || []
     });
     setIsEditOpen(true);
   };
@@ -171,8 +352,7 @@ const Surveys = () => {
   const handleOpenQRModal = async (survey) => {
     setQrModalSurvey(survey);
     setCopiedLink(false);
-    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const surveyUrl = `${baseUrl}/survey/${survey.id}`;
+    const surveyUrl = `${window.location.origin}/survey/${survey.id}`;
     try {
       const url = await QRCode.toDataURL(surveyUrl, {
         width: 280,
@@ -191,15 +371,14 @@ const Surveys = () => {
   const handleDownloadQR = () => {
     if (!qrCodeDataUrl || !qrModalSurvey) return;
     const link = document.createElement('a');
-    link.download = `QR_KhaoSat_${qrModalSurvey.id}.png`;
+    link.download = `QR_KhaoSat_${qrModalSurvey.id}_${qrModalSurvey.institution || 'Edu'}.png`;
     link.href = qrCodeDataUrl;
     link.click();
     showToast('Đã tải xuống ảnh mã QR (.png)!');
   };
 
   const handleCopySurveyLink = (surveyId) => {
-    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const url = `${baseUrl}/survey/${surveyId}`;
+    const url = `${window.location.origin}/survey/${surveyId}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     showToast('Đã sao chép đường dẫn khảo sát vào Clipboard!');
@@ -232,16 +411,22 @@ const Surveys = () => {
     setIsQuestionBuilderOpen(true);
   };
 
-  // Tính năng tạo câu hỏi mẫu nhanh theo biến
+  // Nạp nguyên vẹn một bộ câu hỏi mẫu vào bảng hỏi
+  const handleLoadFullRoleQuestions = (roleKey) => {
+    const tmpl = ROLE_QUESTIONNAIRES[roleKey];
+    if (!tmpl) return;
+    setCurrentQuestions(tmpl.questions);
+    setCurrentHypotheses(tmpl.hypotheses);
+    showToast(`Đã nạp trọn bộ ${tmpl.questions.length} câu hỏi & ${tmpl.hypotheses.length} giả thuyết của ${tmpl.roleName}!`);
+  };
+
+  // Sinh câu hỏi mẫu theo biến
   const handleGenerateSampleQuestions = (varName) => {
     const samples = SAMPLE_QUESTIONS[varName] || [
       { code: `${varName}1`, text: `Nhận định 1 của nhân tố ${varName} trong thực tế.`, variable: varName, type: 'likert' },
-      { code: `${varName}2`, text: `Nhận định 2 của nhân tố ${varName} trong thực tế.`, variable: varName, type: 'likert' },
-      { code: `${varName}3`, text: `Nhận định 3 của nhân tố ${varName} trong thực tế.`, variable: varName, type: 'likert' },
-      { code: `${varName}4`, text: `Nhận định 4 của nhân tố ${varName} trong thực tế.`, variable: varName, type: 'likert' },
+      { code: `${varName}2`, text: `Nhận định 2 của nhân tố ${varName} trong thực tế.`, variable: varName, type: 'likert' }
     ];
 
-    // Lọc các câu chưa có
     const existingCodes = currentQuestions.map(q => q.code);
     const toAdd = samples.filter(s => !existingCodes.includes(s.code));
 
@@ -252,37 +437,6 @@ const Surveys = () => {
 
     setCurrentQuestions([...currentQuestions, ...toAdd]);
     showToast(`Đã tự động sinh ${toAdd.length} câu hỏi mẫu chuẩn cho biến ${varName}!`);
-  };
-
-  // Tính năng tạo nhanh câu hỏi định tính mở (Tự luận / Văn bản)
-  const handleAddQualitativeQuestions = () => {
-    const toAdd = [
-      {
-        code: 'TXT_BARRIER',
-        text: 'Theo bạn, rào cản hoặc khó khăn lớn nhất khi triển khai công tác chuyển đổi số tại đơn vị hiện nay là gì?',
-        variable: 'QUALITATIVE',
-        type: 'textarea',
-        placeholder: 'Nhập ý kiến nhận xét, rào cản gặp phải (ví dụ: hạ tầng, đường truyền, đào tạo...)'
-      },
-      {
-        code: 'TXT_SUGGESTION',
-        text: 'Đề xuất hoặc kiến nghị cụ thể của bạn để nâng cao hiệu quả chuyển đổi số và năng lực thích ứng trong thời gian tới:',
-        variable: 'QUALITATIVE',
-        type: 'textarea',
-        placeholder: 'Nhập các giải pháp hoặc kiến nghị đề xuất...'
-      }
-    ];
-
-    const existingCodes = currentQuestions.map(q => q.code);
-    const filtered = toAdd.filter(q => !existingCodes.includes(q.code));
-
-    if (filtered.length === 0) {
-      showToast('Đã có các câu hỏi tự luận định tính trong bảng hỏi!', 'info');
-      return;
-    }
-
-    setCurrentQuestions([...currentQuestions, ...filtered]);
-    showToast(`Đã thêm ${filtered.length} câu hỏi tự luận định tính vào bảng hỏi!`);
   };
 
   // Thêm câu hỏi tùy chỉnh
@@ -302,7 +456,7 @@ const Surveys = () => {
     setCurrentQuestions([...currentQuestions, newQ]);
     setNewQuestionText('');
     setNewQuestionCode('');
-    showToast(`Đã thêm câu hỏi ${code} (${newQuestionType === 'likert' ? 'Likert' : 'Tự luận'})!`);
+    showToast(`Đã thêm câu hỏi ${code}!`);
   };
 
   // Xóa câu hỏi
@@ -354,8 +508,7 @@ const Surveys = () => {
   };
 
   const handleShare = (survey) => {
-    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-    const shareUrl = `${baseUrl}/survey/${survey.id}`;
+    const shareUrl = `${window.location.origin}/survey/${survey.id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl);
       showToast(`Đã sao chép link khảo sát #${survey.id}!`);
@@ -377,50 +530,121 @@ const Surveys = () => {
     }
   };
 
+  const getRoleBadge = (audience) => {
+    const tmpl = ROLE_QUESTIONNAIRES[audience];
+    if (tmpl) {
+      return (
+        <span style={{ fontSize: '0.725rem', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: '600', backgroundColor: tmpl.badgeBg, color: tmpl.badgeColor, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+          <tmpl.icon size={12} />
+          {tmpl.roleName}
+        </span>
+      );
+    }
+    return (
+      <span style={{ fontSize: '0.725rem', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: '500', backgroundColor: '#F3F4F6', color: '#4B5563' }}>
+        Khảo sát chung
+      </span>
+    );
+  };
+
+  // Danh sách các trường có trong DB để lọc
+  const uniqueInstitutions = Array.from(new Set(surveys.map(s => s.institution).filter(Boolean)));
+
+  // Lọc khảo sát
+  const filteredSurveys = surveys.filter(s => {
+    const matchInst = filterInstitution === 'all' || s.institution === filterInstitution;
+    const matchAud = filterAudience === 'all' || s.audience === filterAudience;
+    return matchInst && matchAud;
+  });
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+        <div style={{ color: 'var(--text-muted)' }}>Đang tải danh sách bảng hỏi...</div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+      {/* HEADER & NÚT TẠO MỚI */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bảng hỏi khảo sát</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Quản lý bộ câu hỏi, thiết kế thang đo Likert và khai báo giả thuyết SEM</p>
+          <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            Bảng hỏi khảo sát
+          </h1>
+          <p style={{ color: 'var(--text-muted)' }}>
+            Quản trị 4 bộ câu hỏi theo chức vụ, định danh theo trường/đơn vị và khai báo giả thuyết mô hình SEM
+          </p>
         </div>
         {currentUser?.role !== 'viewer' && (
-          <button className="btn btn-primary" onClick={handleOpenCreate}>
+          <button className="btn btn-primary" onClick={handleOpenCreate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Plus size={18} />
-            Tạo mới
+            Tạo bảng hỏi mới
           </button>
         )}
       </div>
 
-      {loading && (!surveys || surveys.length === 0) ? (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="table-container">
-            <table className="table">
-              <thead style={{ backgroundColor: '#F9FAFB' }}>
-                <tr>
-                  <th>Tiêu đề &amp; Cấu trúc</th>
-                  <th>Trạng thái (Click đổi)</th>
-                  <th>Thang đo</th>
-                  <th>Phản hồi / Mục tiêu</th>
-                  <th>Biến nghiên cứu</th>
-                  <th>Ngày tạo</th>
-                  <th style={{ textAlign: 'right' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <SkeletonTableRows columns={7} rows={5} />
-            </table>
-          </div>
+      {/* THANH BỘ LỌC ĐỊNH DANH THEO TRƯỜNG & CHỨC VỤ */}
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', backgroundColor: 'white', padding: '0.875rem 1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: '600' }}>
+          <Filter size={16} /> Bộ lọc:
         </div>
-      ) : surveys.length === 0 ? (
+
+        {/* Lọc theo Trường / Cơ sở */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Building2 size={16} color="var(--primary)" />
+          <select 
+            className="input" 
+            style={{ minWidth: '220px', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+            value={filterInstitution}
+            onChange={(e) => setFilterInstitution(e.target.value)}
+          >
+            <option value="all">-- Tất cả Trường / Cơ sở ({surveys.length}) --</option>
+            {uniqueInstitutions.map(inst => (
+              <option key={inst} value={inst}>{inst}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Lọc theo Bộ chức vụ */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Users size={16} color="#059669" />
+          <select 
+            className="input" 
+            style={{ minWidth: '220px', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+            value={filterAudience}
+            onChange={(e) => setFilterAudience(e.target.value)}
+          >
+            <option value="all">-- Tất cả nhóm chức vụ --</option>
+            <option value="leadership">Bộ 1: Ban Giám hiệu & Hội đồng trường</option>
+            <option value="dept_head">Bộ 2: Trưởng / Phó Khoa, Phòng / Ban</option>
+            <option value="lecturer_staff">Bộ 3: Giảng viên / Giáo viên / Nhân viên</option>
+            <option value="student_alumni">Bộ 4: Người học & Cựu người học</option>
+          </select>
+        </div>
+
+        {(filterInstitution !== 'all' || filterAudience !== 'all') && (
+          <button 
+            className="btn btn-outline" 
+            style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+            onClick={() => { setFilterInstitution('all'); setFilterAudience('all'); }}
+          >
+            Xóa bộ lọc
+          </button>
+        )}
+      </div>
+
+      {filteredSurveys.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <FileSpreadsheet size={28} />
           </div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>Chưa có bảng hỏi nào</h3>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>Chưa có bảng hỏi nào phù hợp</h3>
           <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '400px' }}>
-            Hệ thống đang ở trạng thái sạch dữ liệu. Hãy tạo bảng hỏi khảo sát đầu tiên để bắt đầu nghiên cứu!
+            Không tìm thấy bảng hỏi nào khớp với bộ lọc hiện tại. Hãy chọn bộ lọc khác hoặc tạo bảng hỏi mới!
           </p>
           {currentUser?.role !== 'viewer' && (
             <button className="btn btn-primary" onClick={handleOpenCreate}>
@@ -435,25 +659,34 @@ const Surveys = () => {
             <table className="table">
               <thead style={{ backgroundColor: '#F9FAFB' }}>
                 <tr>
-                  <th>Tiêu đề &amp; Cấu trúc</th>
-                  <th>Trạng thái (Click đổi)</th>
+                  <th>Tiêu đề &amp; Đơn vị định danh</th>
+                  <th>Đối tượng chức vụ</th>
+                  <th>Trạng thái</th>
                   <th>Thang đo</th>
-                  <th>Phản hồi / Mục tiêu</th>
+                  <th>Tiến độ mẫu (N)</th>
                   <th>Biến nghiên cứu</th>
-                  <th>Ngày tạo</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {surveys.map((survey) => (
+                {filteredSurveys.map((survey) => (
                   <tr key={survey.id}>
                     <td>
-                      <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{survey.title}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <span>{survey.questions_count} câu hỏi</span>
-                        <span>•</span>
-                        <span>{(survey.hypotheses || []).length} giả thuyết</span>
+                      <div style={{ fontWeight: '600', marginBottom: '0.35rem', color: '#1E293B' }}>{survey.title}</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', fontSize: '0.75rem' }}>
+                        {/* THẺ ĐỊNH DANH TRƯỜNG / ĐƠN VỊ */}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.15rem 0.5rem', backgroundColor: '#F3E8FF', color: '#6B21A8', borderRadius: '4px', fontWeight: '600' }}>
+                          <Building2 size={12} />
+                          {survey.institution || 'Cơ sở giáo dục đại học'}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)' }}>•</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{survey.questions_count} câu hỏi</span>
+                        <span style={{ color: 'var(--text-muted)' }}>•</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{(survey.hypotheses || []).length} giả thuyết SEM</span>
                       </div>
+                    </td>
+                    <td>
+                      {getRoleBadge(survey.audience)}
                     </td>
                     <td>
                       <button 
@@ -469,16 +702,16 @@ const Surveys = () => {
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
                         {survey.responses_count} / {survey.target}
                       </div>
-                      <div style={{ width: '100px', height: '4px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ width: '100px', height: '5px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div 
                           style={{ 
                             width: `${Math.min(100, (survey.responses_count / (survey.target || 1)) * 100)}%`, 
                             height: '100%', 
-                            backgroundColor: survey.responses_count >= survey.target ? 'var(--secondary)' : 'var(--primary)', 
-                            borderRadius: '2px' 
+                            backgroundColor: survey.responses_count >= survey.target ? '#10B981' : 'var(--primary)', 
+                            borderRadius: '3px' 
                           }}
                         ></div>
                       </div>
@@ -486,29 +719,39 @@ const Surveys = () => {
                     <td>
                       <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                         {Array.isArray(survey.variables) && survey.variables.map(v => (
-                          <span key={v} style={{ fontSize: '0.7rem', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.125rem 0.375rem', color: 'var(--text-muted)', backgroundColor: '#F9FAFB' }}>
+                          <span key={v} style={{ fontSize: '0.65rem', border: '1px solid var(--border-color)', borderRadius: '3px', padding: '0.1rem 0.3rem', color: '#475569', backgroundColor: '#F8FAFC', fontWeight: '600' }}>
                             {v}
                           </span>
                         ))}
                       </div>
                     </td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{survey.created_at}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {/* NÚT PHÂN TÍCH 5 KHÂU APA 7 */}
+                        <Link 
+                          to={`/analytics?surveyId=${survey.id}`}
+                          className="btn-outline" 
+                          style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: '#4338CA', backgroundColor: '#EEF2FF', borderColor: '#C7D2FE', display: 'inline-flex', alignItems: 'center' }} 
+                          title="Phân tích thống kê 5 khâu chuẩn APA 7 cho khảo sát này"
+                        >
+                          <BarChart2 size={16} />
+                        </Link>
+
                         {/* NÚT THIẾT KẾ CÂU HỎI & GIẢ THUYẾT */}
                         <button 
                           className="btn-outline" 
-                          style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: 'var(--primary)', backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }} 
-                          title="Thiết kế câu hỏi & Khai báo giả thuyết"
+                          style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: 'var(--primary)', backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }} 
+                          title="Thiết kế bộ câu hỏi & Khai báo giả thuyết"
                           onClick={() => handleOpenQuestionBuilder(survey)}
                         >
                           <ListPlus size={16} />
                         </button>
 
+
                         {/* NÚT MÃ QR CODE */}
                         <button 
                           className="btn-outline" 
-                          style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: '#0284C7', backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }} 
+                          style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: '#0284C7', backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }} 
                           title="Tạo mã QR Code để quét điện thoại"
                           onClick={() => handleOpenQRModal(survey)}
                         >
@@ -518,7 +761,7 @@ const Surveys = () => {
                         {/* NÚT XEM TRƯỚC (PREVIEW) */}
                         <button 
                           className="btn-outline" 
-                          style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: '#059669', backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }} 
+                          style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: '#059669', backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }} 
                           title="Xem trước biểu mẫu khảo sát (Preview)"
                           onClick={() => handlePreviewSurvey(survey.id)}
                         >
@@ -529,8 +772,8 @@ const Surveys = () => {
                         {currentUser?.role !== 'viewer' && (
                           <button 
                             className="btn-outline" 
-                            style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: '#D97706', backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }} 
-                            title="Nhân bản bảng hỏi (Clone / Duplicate)"
+                            style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: '#D97706', backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }} 
+                            title="Nhân bản bảng hỏi (Clone)"
                             onClick={() => handleCloneSurvey(survey)}
                           >
                             <Copy size={16} />
@@ -540,7 +783,7 @@ const Surveys = () => {
                         {currentUser?.role !== 'viewer' && (
                           <button 
                             className="btn-outline" 
-                            style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }} 
+                            style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)' }} 
                             title="Chỉnh sửa thông tin"
                             onClick={() => handleOpenEdit(survey)}
                           >
@@ -549,16 +792,16 @@ const Surveys = () => {
                         )}
                         <button 
                           className="btn-outline" 
-                          style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: 'var(--primary)' }} 
-                          title="Chia sẻ link khảo sát"
+                          style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: 'var(--primary)' }} 
+                          title="Sao chép link khảo sát"
                           onClick={() => handleShare(survey)}
                         >
                           <Share2 size={16} />
                         </button>
                         <button 
                           className="btn-outline" 
-                          style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: '#8B5CF6' }} 
-                          title="Phân tích dữ liệu"
+                          style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: '#8B5CF6' }} 
+                          title="Phân tích dữ liệu học thuật"
                           onClick={() => handleAnalyze(survey)}
                         >
                           <BarChart2 size={16} />
@@ -566,7 +809,7 @@ const Surveys = () => {
                         {currentUser?.role !== 'viewer' && (
                           <button 
                             className="btn-outline" 
-                            style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: 'var(--danger)' }} 
+                            style={{ padding: '0.35rem', borderRadius: 'var(--radius-md)', color: 'var(--danger)' }} 
                             title="Xóa khảo sát"
                             onClick={() => setDeleteConfirmId(survey.id)}
                           >
@@ -583,15 +826,334 @@ const Surveys = () => {
         </div>
       )}
 
-      {/* MODAL THIẾT KẾ BỘ CÂU HỎI & KHAI BÁO GIẢ THUYẾT NGHIÊN CỨU */}
+      {/* ========================================================= */}
+      {/* MODAL TẠO MỚI BẢNG HỎI (HỖ TRỢ THEO CHỨC VỤ & ĐƠN VỊ ĐỊNH DANH) */}
+      {/* ========================================================= */}
+      {isCreateOpen && (
+        <div className="modal-backdrop" onClick={() => setIsCreateOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '820px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Khởi tạo Bảng hỏi Khảo sát mới</h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Lựa chọn bộ mẫu chuẩn hóa theo chức vụ và định danh theo trường/cơ sở giáo dục để thu thập xử lý
+                </p>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsCreateOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSubmit}>
+              <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+                
+                {/* 1. CHỌN MẪU BỘ CÂU HỎI THEO CHỨC VỤ */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label className="form-label" style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Sparkles size={16} color="var(--primary)" />
+                    Bước 1: Chọn Bộ câu hỏi chuẩn hóa theo Chức vụ / Đối tượng:
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                    {Object.keys(ROLE_QUESTIONNAIRES).map((roleKey) => {
+                      const tmpl = ROLE_QUESTIONNAIRES[roleKey];
+                      const isSelected = selectedRoleTemplate === roleKey;
+                      const IconComp = tmpl.icon;
+
+                      return (
+                        <div
+                          key={roleKey}
+                          onClick={() => applyRoleTemplate(roleKey)}
+                          style={{
+                            padding: '0.875rem 1rem',
+                            borderRadius: '8px',
+                            border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                            backgroundColor: isSelected ? '#EFF6FF' : '#F9FAFB',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <div style={{ padding: '0.35rem', borderRadius: '6px', backgroundColor: tmpl.badgeBg, color: tmpl.badgeColor }}>
+                              <IconComp size={16} />
+                            </div>
+                            <span style={{ fontWeight: '700', fontSize: '0.875rem', color: isSelected ? 'var(--primary)' : 'var(--text-main)' }}>
+                              {tmpl.roleName}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                            {tmpl.subtitle}
+                          </div>
+                          <div style={{ marginTop: '0.4rem', fontSize: '0.7rem', color: 'var(--primary)', fontWeight: '600' }}>
+                            ✓ 10 câu Likert + 2 câu mở định tính
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. ĐỊNH DANH THEO TRƯỜNG / ĐƠN VỊ ĐIỀN */}
+                <div style={{ padding: '1rem', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '1.25rem' }}>
+                  <label className="form-label" style={{ fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Building2 size={16} color="var(--primary)" />
+                    Bước 2: Tên Trường / Đơn vị thực hiện khảo sát (Định danh dữ liệu) *
+                  </label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    placeholder="VD: Trường Đại học Sư phạm Hà Nội, Trường ĐH Bách Khoa..." 
+                    value={formData.institution}
+                    onChange={(e) => {
+                      const newInst = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        institution: newInst,
+                        title: selectedRoleTemplate && ROLE_QUESTIONNAIRES[selectedRoleTemplate] 
+                          ? `${ROLE_QUESTIONNAIRES[selectedRoleTemplate].defaultTitle} — ${newInst || 'Trường Đại học'}`
+                          : prev.title
+                      }));
+                    }}
+                    required
+                  />
+                  <span className="form-hint">Mọi phiếu phản hồi thu thập sẽ được gắn định danh vào trường/cơ sở này để phục vụ phân tích so sánh và làm sạch dữ liệu.</span>
+                </div>
+
+                {/* 3. TIÊU ĐỀ & MÔ TẢ CHI TIẾT */}
+                <div className="form-group">
+                  <label className="form-label">Tiêu đề bảng hỏi khảo sát *</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Mục tiêu &amp; Phạm vi nghiên cứu (Subtitle)</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.subtitle}
+                    onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Thang đo đo lường</label>
+                    <select 
+                      className="input"
+                      value={formData.scale}
+                      onChange={(e) => setFormData({ ...formData, scale: e.target.value })}
+                    >
+                      <option value="Likert 5">Likert 5 mức độ (Chuẩn)</option>
+                      <option value="Likert 7">Likert 7 mức độ</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Mục tiêu số mẫu (N)</label>
+                    <input 
+                      type="number" 
+                      className="input" 
+                      value={formData.target}
+                      onChange={(e) => setFormData({ ...formData, target: parseInt(e.target.value) || 50 })}
+                      min="10"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Trạng thái khởi tạo</label>
+                    <select 
+                      className="input"
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    >
+                      <option value="Active">Đang mở (Active)</option>
+                      <option value="Draft">Bản nháp (Draft)</option>
+                      <option value="Closed">Đã đóng (Closed)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Các biến nghiên cứu trong mô hình</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.variables}
+                    onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
+                  />
+                </div>
+
+                {/* XEM TRƯỚC SỐ CÂU HỎI ĐÃ NẠP TỰ ĐỘNG */}
+                <div style={{ padding: '0.75rem 1rem', backgroundColor: '#ECFDF5', borderRadius: '6px', border: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#065F46', fontWeight: '600' }}>
+                    ✓ Đã tự động nạp {formData.questions.length} câu hỏi &amp; {formData.hypotheses.length} giả thuyết SEM cho bộ này.
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#047857' }}>
+                    Có thể tùy biến thêm bớt trong mục Thiết kế câu hỏi sau khi tạo.
+                  </span>
+                </div>
+
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setIsCreateOpen(false)}>
+                  Hủy bỏ
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Tạo khảo sát
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL CHỈNH SỬA BẢNG HỎI */}
+      {/* ========================================================= */}
+      {isEditOpen && selectedSurvey && (
+        <div className="modal-backdrop" onClick={() => setIsEditOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Chỉnh sửa bảng hỏi #{selectedSurvey.id}</h2>
+              <button className="modal-close-btn" onClick={() => setIsEditOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Tên Trường / Đơn vị khảo sát (Định danh) *</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.institution}
+                    onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Tiêu đề khảo sát *</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Mục tiêu &amp; Phạm vi (Subtitle)</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.subtitle}
+                    onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Nhóm chức vụ / Đối tượng</label>
+                    <select
+                      className="input"
+                      value={formData.audience}
+                      onChange={(e) => setFormData({ ...formData, audience: e.target.value })}
+                    >
+                      <option value="leadership">Ban Giám hiệu &amp; Hội đồng trường</option>
+                      <option value="dept_head">Trưởng / Phó Khoa, Phòng / Ban</option>
+                      <option value="lecturer_staff">Giảng viên / Giáo viên / Nhân viên</option>
+                      <option value="student_alumni">Học sinh / Sinh viên / Cựu SV / Sau ĐH</option>
+                      <option value="custom">Tùy chỉnh khác</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Mục tiêu số mẫu (N)</label>
+                    <input 
+                      type="number" 
+                      className="input" 
+                      value={formData.target}
+                      onChange={(e) => setFormData({ ...formData, target: parseInt(e.target.value) || 100 })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Thang đo đo lường</label>
+                    <select 
+                      className="input"
+                      value={formData.scale}
+                      onChange={(e) => setFormData({ ...formData, scale: e.target.value })}
+                    >
+                      <option value="Likert 5">Likert 5 mức độ</option>
+                      <option value="Likert 7">Likert 7 mức độ</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Trạng thái</label>
+                    <select 
+                      className="input"
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    >
+                      <option value="Active">Đang mở (Active)</option>
+                      <option value="Draft">Bản nháp (Draft)</option>
+                      <option value="Closed">Đã đóng (Closed)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Các biến nghiên cứu</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={formData.variables}
+                    onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setIsEditOpen(false)}>
+                  Hủy bỏ
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL THIẾT KẾ BỘ CÂU HỎI & KHAI BÁO GIẢ THUYẾT */}
+      {/* ========================================================= */}
       {isQuestionBuilderOpen && selectedSurvey && (
         <div className="modal-backdrop" onClick={() => setIsQuestionBuilderOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: '780px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '840px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">Thiết kế bộ câu hỏi: {selectedSurvey.title}</h2>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Thang đo: {selectedSurvey.scale} • Tổng số: {currentQuestions.length} câu hỏi • {currentHypotheses.length} giả thuyết
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <span>Trường: <strong>{selectedSurvey.institution || 'Chung'}</strong></span>
+                  <span>•</span>
+                  <span>Thang đo: {selectedSurvey.scale}</span>
+                  <span>•</span>
+                  <span>Tổng số: {currentQuestions.length} câu hỏi</span>
+                  <span>•</span>
+                  <span>{currentHypotheses.length} giả thuyết SEM</span>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setIsQuestionBuilderOpen(false)}>
@@ -626,47 +1188,77 @@ const Surveys = () => {
               </button>
             </div>
 
-            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <div className="modal-body" style={{ maxHeight: '62vh', overflowY: 'auto' }}>
               {builderTab === 'questions' ? (
                 <div>
-                  {/* TÍNH NĂNG TẠO CÂU HỎI MẪU NHANH THEO BIẾN & ĐỊNH TÍNH */}
-                  <div style={{ padding: '1rem', backgroundColor: '#EFF6FF', borderRadius: 'var(--radius-md)', border: '1px solid #BFDBFE', marginBottom: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <Sparkles size={18} color="#2563EB" />
-                      <span style={{ fontWeight: '700', fontSize: '0.875rem', color: '#1E40AF' }}>
-                        Khởi tạo câu hỏi mẫu nhanh (1-Click Generator):
+                  {/* THANH NẠP NHANH TRỌN BỘ CÂU HỎI THEO CHỨC VỤ */}
+                  <div style={{ padding: '0.875rem 1rem', backgroundColor: '#F0FDF4', borderRadius: 'var(--radius-md)', border: '1px solid #BBF7D0', marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                      <CheckCircle size={16} color="#16A34A" />
+                      <span style={{ fontWeight: '700', fontSize: '0.85rem', color: '#15803D' }}>
+                        Nạp nhanh trọn bộ 10 câu Likert theo nhóm chức vụ:
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#1E40AF', marginBottom: '0.75rem' }}>
-                      Bấm vào từng loại dưới đây để tự động chèn các câu hỏi đo lường chuẩn hóa hoặc câu hỏi định tính mở:
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', backgroundColor: 'white', color: '#1E3A8A', border: '1px solid #BFDBFE' }}
+                        onClick={() => handleLoadFullRoleQuestions('leadership')}
+                      >
+                        Nạp Bộ 1 (BGH &amp; Hội đồng trường)
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', backgroundColor: 'white', color: '#065F46', border: '1px solid #A7F3D0' }}
+                        onClick={() => handleLoadFullRoleQuestions('dept_head')}
+                      >
+                        Nạp Bộ 2 (Trưởng/Phó Khoa, Phòng)
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', backgroundColor: 'white', color: '#7C2D12', border: '1px solid #FED7AA' }}
+                        onClick={() => handleLoadFullRoleQuestions('lecturer_staff')}
+                      >
+                        Nạp Bộ 3 (Giảng viên &amp; CBNV)
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', backgroundColor: 'white', color: '#4C1D95', border: '1px solid #DDD6FE' }}
+                        onClick={() => handleLoadFullRoleQuestions('student_alumni')}
+                      >
+                        Nạp Bộ 4 (Người học &amp; Cựu SV)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* TÍNH NĂNG SINH THEO TỪNG BIẾN */}
+                  <div style={{ padding: '0.875rem 1rem', backgroundColor: '#EFF6FF', borderRadius: 'var(--radius-md)', border: '1px solid #BFDBFE', marginBottom: '1.25rem' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#1E40AF', marginBottom: '0.5rem', fontWeight: '600' }}>
+                      Hoặc chèn câu hỏi đo lường theo từng biến nghiên cứu:
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {['SP', 'LD', 'DX', 'AT'].map(v => (
+                      {['STR', 'LEA', 'CAP', 'RES', 'SER', 'REA'].map(v => (
                         <button
                           key={v}
                           type="button"
                           className="btn"
-                          style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', backgroundColor: 'white', color: '#1E40AF', border: '1px solid #93C5FD' }}
+                          style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', backgroundColor: 'white', color: '#1E40AF', border: '1px solid #93C5FD' }}
                           onClick={() => handleGenerateSampleQuestions(v)}
                         >
-                          + 4 câu Likert cho <strong>{v}</strong>
+                          + Biến <strong>{v}</strong>
                         </button>
                       ))}
-                      <button
-                        type="button"
-                        className="btn"
-                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', backgroundColor: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D', fontWeight: '600' }}
-                        onClick={handleAddQualitativeQuestions}
-                      >
-                        + Thêm 2 câu hỏi định tính mở (Rào cản &amp; Đề xuất)
-                      </button>
                     </div>
                   </div>
 
                   {/* FORM THÊM CÂU HỎI TÙY CHỈNH */}
                   <div style={{ padding: '1rem', backgroundColor: '#F9FAFB', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
                     <span style={{ fontWeight: '600', fontSize: '0.85rem', display: 'block', marginBottom: '0.75rem' }}>
-                      Thêm câu hỏi tùy chỉnh mới (Hỗ trợ đa dạng loại câu hỏi):
+                      Thêm câu hỏi tùy chỉnh mới:
                     </span>
                     <div style={{ display: 'grid', gridTemplateColumns: '110px 140px 100px 1fr auto', gap: '0.5rem', alignItems: 'center' }}>
                       <select 
@@ -675,7 +1267,7 @@ const Surveys = () => {
                         onChange={(e) => setNewQuestionVar(e.target.value)}
                         title="Thuộc biến nghiên cứu"
                       >
-                        {['SP', 'LD', 'DX', 'AT', 'QUALITATIVE', 'KHAC'].map(v => <option key={v} value={v}>{v}</option>)}
+                        {['STR', 'LEA', 'CAP', 'RES', 'SER', 'REA', 'QUALITATIVE', 'KHAC'].map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
 
                       <select
@@ -693,7 +1285,7 @@ const Surveys = () => {
                       <input 
                         type="text" 
                         className="input" 
-                        placeholder="Mã (SP5/TXT)" 
+                        placeholder="Mã (STR3/TXT)" 
                         value={newQuestionCode}
                         onChange={(e) => setNewQuestionCode(e.target.value)}
                       />
@@ -761,7 +1353,7 @@ const Surveys = () => {
                   </div>
                 </div>
               ) : (
-                /* TAB GIẢ THUYẾT NGHIÊN CỨU */
+                /* TAB GIẢ THUYẾT NGHIÊN CỨU SEM */
                 <div>
                   <div style={{ padding: '1rem', backgroundColor: '#F0FDF4', borderRadius: 'var(--radius-md)', border: '1px solid #BBF7D0', marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -773,30 +1365,46 @@ const Surveys = () => {
                     <div style={{ fontSize: '0.8rem', color: '#15803D', marginBottom: '0.75rem' }}>
                       Các giả thuyết này sẽ được sử dụng trực tiếp trong tab Kiểm định giả thuyết (Phân tích hồi quy &amp; PLS-SEM):
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <button 
                         type="button" 
                         className="btn" 
                         style={{ fontSize: '0.75rem', backgroundColor: 'white', color: '#15803D', border: '1px solid #86EFAC' }}
-                        onClick={() => handleAddHypothesis('SP', 'AT')}
+                        onClick={() => handleAddHypothesis('STR', 'REA')}
                       >
-                        + Khai báo H: SP ➔ AT
+                        + Khai báo H: STR ➔ REA
                       </button>
                       <button 
                         type="button" 
                         className="btn" 
                         style={{ fontSize: '0.75rem', backgroundColor: 'white', color: '#15803D', border: '1px solid #86EFAC' }}
-                        onClick={() => handleAddHypothesis('LD', 'AT')}
+                        onClick={() => handleAddHypothesis('LEA', 'REA')}
                       >
-                        + Khai báo H: LD ➔ AT
+                        + Khai báo H: LEA ➔ REA
                       </button>
                       <button 
                         type="button" 
                         className="btn" 
                         style={{ fontSize: '0.75rem', backgroundColor: 'white', color: '#15803D', border: '1px solid #86EFAC' }}
-                        onClick={() => handleAddHypothesis('DX', 'AT')}
+                        onClick={() => handleAddHypothesis('CAP', 'SER')}
                       >
-                        + Khai báo H: DX ➔ AT
+                        + Khai báo H: CAP ➔ SER
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn" 
+                        style={{ fontSize: '0.75rem', backgroundColor: 'white', color: '#15803D', border: '1px solid #86EFAC' }}
+                        onClick={() => handleAddHypothesis('RES', 'REA')}
+                      >
+                        + Khai báo H: RES ➔ REA
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn" 
+                        style={{ fontSize: '0.75rem', backgroundColor: 'white', color: '#15803D', border: '1px solid #86EFAC' }}
+                        onClick={() => handleAddHypothesis('RES', 'SER')}
+                      >
+                        + Khai báo H: RES ➔ SER
                       </button>
                     </div>
                   </div>
@@ -837,213 +1445,12 @@ const Surveys = () => {
         </div>
       )}
 
-      {/* Modal Tạo mới */}
-      {isCreateOpen && (
-        <div className="modal-backdrop" onClick={() => setIsCreateOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Tạo bảng hỏi khảo sát mới</h2>
-              <button className="modal-close-btn" onClick={() => setIsCreateOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleCreateSubmit}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Tiêu đề khảo sát *</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="VD: Khảo sát chuyển đổi số trong giáo dục đại học" 
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Thang đo đo lường</label>
-                    <select 
-                      className="input"
-                      value={formData.scale}
-                      onChange={(e) => setFormData({ ...formData, scale: e.target.value })}
-                    >
-                      <option value="Likert 5">Likert 5 mức độ</option>
-                      <option value="Likert 7">Likert 7 mức độ</option>
-                      <option value="Nhị phân">Nhị phân (Đúng/Sai)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Mục tiêu số mẫu (N)</label>
-                    <input 
-                      type="number" 
-                      className="input" 
-                      value={formData.target}
-                      onChange={(e) => setFormData({ ...formData, target: parseInt(e.target.value) || 100 })}
-                      min="10"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Trạng thái khởi tạo</label>
-                  <select 
-                    className="input"
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    <option value="Active">Đang mở (Active)</option>
-                    <option value="Draft">Bản nháp (Draft)</option>
-                    <option value="Closed">Đã đóng (Closed)</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Các biến nghiên cứu (phân cách dấu phẩy)</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    placeholder="VD: SP, LD, DX, AT" 
-                    value={formData.variables}
-                    onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
-                  />
-                  <span className="form-hint">Hệ thống sẽ tự động khởi tạo ngân hàng câu hỏi và các giả thuyết theo các biến này</span>
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setIsCreateOpen(false)}>
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Tạo khảo sát
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Chỉnh sửa */}
-      {isEditOpen && selectedSurvey && (
-        <div className="modal-backdrop" onClick={() => setIsEditOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">Chỉnh sửa bảng hỏi #{selectedSurvey.id}</h2>
-              <button className="modal-close-btn" onClick={() => setIsEditOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleEditSubmit}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Tiêu đề khảo sát *</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label className="form-label">Thang đo đo lường</label>
-                    <select 
-                      className="input"
-                      value={formData.scale}
-                      onChange={(e) => setFormData({ ...formData, scale: e.target.value })}
-                    >
-                      <option value="Likert 5">Likert 5 mức độ</option>
-                      <option value="Likert 7">Likert 7 mức độ</option>
-                      <option value="Nhị phân">Nhị phân (Đúng/Sai)</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Mục tiêu số mẫu</label>
-                    <input 
-                      type="number" 
-                      className="input" 
-                      value={formData.target}
-                      onChange={(e) => setFormData({ ...formData, target: parseInt(e.target.value) || 100 })}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Trạng thái</label>
-                  <select 
-                    className="input"
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    <option value="Active">Đang mở (Active)</option>
-                    <option value="Draft">Bản nháp (Draft)</option>
-                    <option value="Closed">Đã đóng (Closed)</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Các biến nghiên cứu</label>
-                  <input 
-                    type="text" 
-                    className="input" 
-                    value={formData.variables}
-                    onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setIsEditOpen(false)}>
-                  Hủy bỏ
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Lưu thay đổi
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Xác nhận xóa */}
-      {deleteConfirmId && (
-        <div className="modal-backdrop" onClick={() => setDeleteConfirmId(null)}>
-          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-body" style={{ textAlign: 'center', paddingTop: '2rem' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                <AlertTriangle size={24} />
-              </div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Xác nhận xóa bảng hỏi?</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                Hành động này sẽ xóa vĩnh viễn bảng hỏi cùng tất cả các dữ liệu phản hồi liên quan đã thu thập. Không thể hoàn tác!
-              </p>
-            </div>
-            <div className="modal-footer" style={{ justifyContent: 'center' }}>
-              <button className="btn btn-outline" onClick={() => setDeleteConfirmId(null)}>
-                Hủy bỏ
-              </button>
-              <button 
-                className="btn" 
-                style={{ backgroundColor: '#EF4444', color: 'white' }}
-                onClick={() => handleDelete(deleteConfirmId)}
-              >
-                Đồng ý xóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Mã QR Code */}
+      {/* ========================================================= */}
+      {/* MODAL MÃ QR CODE */}
+      {/* ========================================================= */}
       {qrModalSurvey && (
         <div className="modal-backdrop" onClick={() => setQrModalSurvey(null)}>
-          <div className="modal-content" style={{ maxWidth: '440px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '460px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">Mã QR Khảo Sát #{qrModalSurvey.id}</h2>
               <button className="modal-close-btn" onClick={() => setQrModalSurvey(null)}>
@@ -1051,11 +1458,17 @@ const Surveys = () => {
               </button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', backgroundColor: '#F3E8FF', color: '#6B21A8', borderRadius: '4px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <Building2 size={12} />
+                  {qrModalSurvey.institution || 'Cơ sở giáo dục đại học'}
+                </span>
+              </div>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 'bold', marginBottom: '0.25rem', color: 'var(--text-main)' }}>
                 {qrModalSurvey.title}
               </h3>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                Người tham gia chỉ cần mở Camera hoặc Zalo quét mã dưới đây để vào điền phiếu ngay lập tức:
+                Người tham gia chỉ cần mở Camera điện thoại hoặc Zalo quét mã dưới đây để vào làm bài ngay lập tức:
               </p>
 
               {qrCodeDataUrl && (
@@ -1088,6 +1501,35 @@ const Surveys = () => {
               </button>
               <button type="button" className="btn btn-primary" onClick={handleDownloadQR}>
                 <Download size={16} /> Tải ảnh QR (.png)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XÓA */}
+      {deleteConfirmId && (
+        <div className="modal-backdrop" onClick={() => setDeleteConfirmId(null)}>
+          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-body" style={{ textAlign: 'center', paddingTop: '2rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                <AlertTriangle size={24} />
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Xác nhận xóa bảng hỏi?</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                Hành động này sẽ xóa vĩnh viễn bảng hỏi cùng tất cả các dữ liệu phản hồi liên quan đã thu thập. Không thể hoàn tác!
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center' }}>
+              <button className="btn btn-outline" onClick={() => setDeleteConfirmId(null)}>
+                Hủy bỏ
+              </button>
+              <button 
+                className="btn" 
+                style={{ backgroundColor: '#EF4444', color: 'white' }}
+                onClick={() => handleDelete(deleteConfirmId)}
+              >
+                Đồng ý xóa
               </button>
             </div>
           </div>

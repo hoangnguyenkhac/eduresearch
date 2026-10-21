@@ -55,7 +55,7 @@ export const authAPI = {
 
 // Dashboard API
 export const dashboardAPI = {
-  getStats: () => fetchAPI('/dashboard'),
+  getStats: (surveyId = '') => fetchAPI(`/dashboard${surveyId && surveyId !== 'all' ? `?surveyId=${surveyId}` : ''}`),
 };
 
 // Surveys API
@@ -67,6 +67,9 @@ export const surveysAPI = {
   updateStatus: (id, status) => fetchAPI(`/surveys/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   clone: (id) => fetchAPI(`/surveys/${id}/clone`, { method: 'POST' }),
   delete: (id) => fetchAPI(`/surveys/${id}`, { method: 'DELETE' }),
+  getAnalysis: (id, filterOutliers = true) => fetchAPI(`/surveys/${id}/analysis?filterOutliers=${filterOutliers}`),
+  seedResponses: (id, count = 75) => fetchAPI(`/surveys/${id}/seed-responses`, { method: 'POST', body: JSON.stringify({ count }) }),
+  seedAll: () => fetchAPI('/surveys/seed-all', { method: 'POST' }),
 };
 
 // Responses API
@@ -74,7 +77,12 @@ export const responsesAPI = {
   getBySurvey: (surveyId = '') => fetchAPI(`/responses?surveyId=${surveyId}`),
   getAll: (surveyId = '') => fetchAPI(`/responses?surveyId=${surveyId}`),
   create: (data) => fetchAPI('/responses', { method: 'POST', body: JSON.stringify(data) }),
-  import: (data) => fetchAPI('/responses/import', { method: 'POST', body: JSON.stringify(data) }),
+  import: (surveyIdOrData, items) => {
+    const payload = typeof surveyIdOrData === 'object' && surveyIdOrData !== null
+      ? surveyIdOrData
+      : { survey_id: surveyIdOrData, items };
+    return fetchAPI('/responses/import', { method: 'POST', body: JSON.stringify(payload) });
+  },
   bulkDelete: (ids, surveyId) => fetchAPI('/responses/bulk-delete', { method: 'POST', body: JSON.stringify({ ids, surveyId }) }),
   bulkStatus: (ids, status) => fetchAPI('/responses/bulk-status', { method: 'POST', body: JSON.stringify({ ids, status }) }),
   delete: (id) => fetchAPI(`/responses/${id}`, { method: 'DELETE' }),

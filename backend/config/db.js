@@ -10,12 +10,50 @@ let db;
 
 if (usePostgres) {
   console.log('[DB] Using PostgreSQL (Supabase)');
-  db = require('./dbPostgres');
+  const dbPostgres = require('./dbPostgres');
+
+  function toPgQuery(sql, params) {
+    if (!params) params = [];
+    let paramIdx = 1;
+    const pgSql = sql.replace(/\?/g, () => `$${paramIdx++}`);
+    return { pgSql, params };
+  }
+
+  db = {
+    ...dbPostgres,
+    get: (sql, params, cb) => {
+      if (typeof params === 'function') { cb = params; params = []; }
+      const { pgSql } = toPgQuery(sql, params);
+      dbPostgres.query(pgSql, params)
+        .then(res => cb(null, res.rows[0]))
+        .catch(err => cb(err));
+    },
+    all: (sql, params, cb) => {
+      if (typeof params === 'function') { cb = params; params = []; }
+      const { pgSql } = toPgQuery(sql, params);
+      dbPostgres.query(pgSql, params)
+        .then(res => cb(null, res.rows))
+        .catch(err => cb(err));
+    },
+    run: function(sql, params, cb) {
+      if (typeof params === 'function') { cb = params; params = []; }
+      const { pgSql } = toPgQuery(sql, params);
+      dbPostgres.query(pgSql, params)
+        .then(res => {
+          const fakeThis = { changes: res.rowCount, lastID: res.rows?.[0]?.id };
+          if (cb) cb.call(fakeThis, null);
+        })
+        .catch(err => {
+          if (cb) cb(err);
+        });
+    }
+  };
 } else {
   console.log('[DB] Using SQLite (local development)');
   const sqlite3 = require('sqlite3').verbose();
   const bcrypt = require('bcryptjs');
   const path = require('path');
+  const { OFFICIAL_SURVEYS } = require('../data/questionnaires');
   const dbPath = path.resolve(__dirname, '../database.sqlite');
 
   const sqliteDb = new sqlite3.Database(dbPath, (err) => {
@@ -53,12 +91,18 @@ if (usePostgres) {
         variables TEXT NOT NULL,
         questions TEXT,
         hypotheses TEXT,
+        audience TEXT,
+        subtitle TEXT,
+        institution TEXT,
         created_at TEXT NOT NULL
       )`);
 
-      // Migrations
+      // Migrations for surveys
       sqliteDb.run(`ALTER TABLE surveys ADD COLUMN questions TEXT`, () => {});
       sqliteDb.run(`ALTER TABLE surveys ADD COLUMN hypotheses TEXT`, () => {});
+      sqliteDb.run(`ALTER TABLE surveys ADD COLUMN audience TEXT`, () => {});
+      sqliteDb.run(`ALTER TABLE surveys ADD COLUMN subtitle TEXT`, () => {});
+      sqliteDb.run(`ALTER TABLE surveys ADD COLUMN institution TEXT`, () => {});
 
       // Responses Table
       sqliteDb.run(`CREATE TABLE IF NOT EXISTS responses (
@@ -66,6 +110,7 @@ if (usePostgres) {
         survey_id INTEGER NOT NULL,
         role TEXT NOT NULL,
         unit TEXT NOT NULL,
+        institution TEXT,
         gender TEXT NOT NULL,
         time_taken TEXT NOT NULL,
         status TEXT NOT NULL,
@@ -73,6 +118,7 @@ if (usePostgres) {
         date TEXT NOT NULL
       )`);
       sqliteDb.run(`ALTER TABLE responses ADD COLUMN answers TEXT`, () => {});
+      sqliteDb.run(`ALTER TABLE responses ADD COLUMN institution TEXT`, () => {});
 
       // Documents Table
       sqliteDb.run(`CREATE TABLE IF NOT EXISTS documents (
@@ -101,6 +147,7 @@ if (usePostgres) {
       )`);
 
       seedSqliteData();
+      seedOfficialSurveys();
     });
   }
 
@@ -125,9 +172,86 @@ if (usePostgres) {
     });
   }
 
-  // Wrapper để API tương thích với dbPostgres (query, getClient, transaction)
+  function seedOfficialSurveys() {
+    const now = new Date();
+    const createdAt = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+    OFFICIAL_SURVEYS.forEach((survey) => {
+      sqliteDb.get(
+        `SELECT id FROM surveys WHERE audience = ? OR title = ?`,
+        [survey.audience, survey.title],
+        (err, row) => {
+          if (err) return;
+          if (row) {
+            sqliteDb.run(
+              `UPDATE surveys SET title = ?, questions_count = ?, status = ?, scale = ?, target = ?, variables = ?, questions = ?, hypotheses = ?, audience = ?, subtitle = ?, institution = ? WHERE id = ?`,
+              [
+                survey.title,
+                survey.questions.length,
+                survey.status,
+                survey.scale,
+                survey.target,
+                survey.variables,
+                JSON.stringify(survey.questions),
+                JSON.stringify(survey.hypotheses),
+                survey.audience,
+                survey.subtitle,
+                survey.institution || 'Cơ sở giáo dục đại học',
+                row.id
+              ]
+            );
+            return;
+          }
+
+          sqliteDb.run(
+            `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at, audience, subtitle, institution)
+             VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              survey.title,
+              survey.questions.length,
+              survey.status,
+              survey.scale,
+              survey.target,
+              survey.variables,
+              JSON.stringify(survey.questions),
+              JSON.stringify(survey.hypotheses),
+              createdAt,
+              survey.audience,
+              survey.subtitle,
+              survey.institution || 'Cơ sở giáo dục đại học'
+            ]
+          );
+        }
+      );
+    });
+
+    setTimeout(() => {
+      try {
+        const { seedAllSurveysIfEmpty } = require('../services/seedResponsesService');
+        seedAllSurveysIfEmpty();
+      } catch (e) {
+        console.error('Lỗi khi nạp seed survey responses:', e);
+      }
+    }, 1000);
+  }
+
+  // Wrapper để API tương thích với dbPostgres và SQLite callbacks
   db = {
-    // Compatibility: db.query(sql, params) -> Promise<{rows, rowCount}>
+    // Callback-based API
+    get: (sql, params, cb) => {
+      if (typeof params === 'function') { cb = params; params = []; }
+      sqliteDb.get(sql, params, cb);
+    },
+    all: (sql, params, cb) => {
+      if (typeof params === 'function') { cb = params; params = []; }
+      sqliteDb.all(sql, params, cb);
+    },
+    run: function(sql, params, cb) {
+      if (typeof params === 'function') { cb = params; params = []; }
+      sqliteDb.run(sql, params, cb);
+    },
+
+    // Promise-based API for dbPostgres compatibility
     query: (sql, params) => {
       return new Promise((resolve, reject) => {
         const isSelect = sql.trim().toUpperCase().startsWith('SELECT');
@@ -139,7 +263,6 @@ if (usePostgres) {
             else resolve({ rows, rowCount: rows.length });
           });
         } else if (isInsert && sql.includes('RETURNING')) {
-          // SQLite doesn't support RETURNING in older versions, handle manually
           sqliteDb.run(sql, params, function(err) {
             if (err) reject(err);
             else resolve({ rows: [{ id: this.lastID }], rowCount: this.changes });
@@ -153,16 +276,12 @@ if (usePostgres) {
       });
     },
     
-    // Compatibility: db.getClient() -> not needed for SQLite
     getClient: () => Promise.resolve({
       query: (sql, params) => db.query(sql, params),
       release: () => {}
     }),
     
-    // Compatibility: db.transaction(callback)
     transaction: async (callback) => {
-      // SQLite doesn't have proper transaction support in this wrapper
-      // Just run callback with a client-like object
       return callback({
         query: (sql, params) => db.query(sql, params)
       });

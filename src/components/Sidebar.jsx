@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FileText, Users, PieChart, Database, FileBox, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, PieChart, Database, FileBox, LogOut, User, Compass } from 'lucide-react';
 
 const Sidebar = () => {
   const { currentUser, logout } = useAuth();
@@ -11,6 +11,7 @@ const Sidebar = () => {
     { name: 'Bảng hỏi khảo sát', path: '/surveys', icon: <FileText size={20} />, roles: ['admin', 'researcher', 'viewer'] },
     { name: 'Phản hồi', path: '/responses', icon: <Database size={20} />, roles: ['admin', 'researcher', 'viewer'] },
     { name: 'Phân tích thống kê', path: '/analytics', icon: <PieChart size={20} />, roles: ['admin', 'researcher', 'viewer'] },
+    { name: 'Bản đồ phân cụm', path: '/clustering', icon: <Compass size={20} />, roles: ['admin', 'researcher', 'viewer'] },
     { name: 'Kho tài liệu', path: '/documents', icon: <FileBox size={20} />, roles: ['admin', 'researcher', 'viewer'] },
     { name: 'Hồ sơ cá nhân', path: '/profile', icon: <User size={20} />, roles: ['admin', 'researcher', 'viewer'] },
     { name: 'Người dùng', path: '/users', icon: <Users size={20} />, roles: ['admin'] },

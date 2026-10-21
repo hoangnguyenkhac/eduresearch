@@ -7,6 +7,7 @@ import Analytics from './pages/Analytics';
 import Users from './pages/Users';
 import Responses from './pages/Responses';
 import Documents from './pages/Documents';
+import Clustering from './pages/Clustering';
 import Profile from './pages/Profile';
 import PublicLayout from './layouts/PublicLayout';
 import PublicSurvey from './pages/PublicSurvey';
@@ -54,6 +55,7 @@ function App() {
           <Route path="surveys" element={<Surveys />} />
           <Route path="responses" element={<Responses />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="clustering" element={<Clustering />} />
           <Route path="documents" element={<Documents />} />
           <Route path="users" element={<Users />} />
           <Route path="profile" element={<Profile />} />

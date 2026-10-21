@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const surveyController = require('../controllers/surveyController');
+const analysisController = require('../controllers/analysisController');
 const { authenticateToken } = require('../middlewares/auth');
 
 /**
@@ -45,6 +46,9 @@ const { authenticateToken } = require('../middlewares/auth');
  *         description: Tạo khảo sát thành công
  */
 router.get('/', authenticateToken, surveyController.getSurveys);
+router.post('/seed-all', authenticateToken, analysisController.seedAllSurveys);
+router.get('/:id/analysis', authenticateToken, analysisController.getSurveyAnalysis);
+router.post('/:id/seed-responses', authenticateToken, analysisController.seedSurveyResponses);
 router.get('/:id', surveyController.getSurveyById);
 router.post('/', authenticateToken, surveyController.createSurvey);
 router.put('/:id', authenticateToken, surveyController.updateSurvey);

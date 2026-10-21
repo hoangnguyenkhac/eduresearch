@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Shield, ShieldCheck, ShieldAlert, X, AlertTriangle, Users as UsersIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, ShieldCheck, ShieldAlert, X, AlertTriangle, Users as UsersIcon, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { usersAPI } from '../services/api';
@@ -18,6 +18,10 @@ const Users = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
+
+  // Password visibility state
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -68,6 +72,7 @@ const Users = () => {
       role: 'researcher',
       unit: ''
     });
+    setShowCreatePassword(false);
     setIsCreateOpen(true);
   };
 
@@ -96,6 +101,7 @@ const Users = () => {
       role: user.role,
       unit: user.unit || ''
     });
+    setShowEditPassword(false);
     setIsEditOpen(true);
   };
 
@@ -312,14 +318,39 @@ const Users = () => {
 
                 <div className="form-group">
                   <label className="form-label">Mật khẩu khởi tạo *</label>
-                  <input 
-                    type="password" 
-                    className="input" 
-                    placeholder="Nhập mật khẩu"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showCreatePassword ? 'text' : 'password'} 
+                      className="input" 
+                      placeholder="Nhập mật khẩu"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      style={{ paddingRight: '2.5rem', width: '100%' }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatePassword(prev => !prev)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        background: 'none',
+                        border: 'none',
+                        padding: '0.25rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                      title={showCreatePassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      aria-label={showCreatePassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      tabIndex="-1"
+                    >
+                      {showCreatePassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -398,13 +429,38 @@ const Users = () => {
 
                 <div className="form-group">
                   <label className="form-label">Mật khẩu mới (bỏ trống nếu giữ nguyên)</label>
-                  <input 
-                    type="password" 
-                    className="input" 
-                    placeholder="Nhập mật khẩu mới để đổi"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showEditPassword ? 'text' : 'password'} 
+                      className="input" 
+                      placeholder="Nhập mật khẩu mới để đổi"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      style={{ paddingRight: '2.5rem', width: '100%' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword(prev => !prev)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        background: 'none',
+                        border: 'none',
+                        padding: '0.25rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 'var(--radius-sm)'
+                      }}
+                      title={showEditPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      aria-label={showEditPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      tabIndex="-1"
+                    >
+                      {showEditPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

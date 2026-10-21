@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Mail, Building2, Shield, KeyRound, CheckCircle, AlertCircle, Save } from 'lucide-react';
+import { User, Lock, Mail, Building2, Shield, KeyRound, CheckCircle, AlertCircle, Save, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import Toast from '../components/Toast';
@@ -28,6 +28,11 @@ const Profile = () => {
 
   const [savingInfo, setSavingInfo] = useState(false);
   const [savingPwd, setSavingPwd] = useState(false);
+
+  // Show/hide passwords
+  const [showOldPwd, setShowOldPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   // Toast
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -341,42 +346,117 @@ const Profile = () => {
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                   Mật khẩu hiện tại <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
-                <input
-                  type="password"
-                  className="input"
-                  value={pwdData.oldPassword}
-                  onChange={(e) => setPwdData({ ...pwdData, oldPassword: e.target.value })}
-                  placeholder="Nhập mật khẩu đang sử dụng..."
-                  required
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showOldPwd ? 'text' : 'password'}
+                    className="input"
+                    value={pwdData.oldPassword}
+                    onChange={(e) => setPwdData({ ...pwdData, oldPassword: e.target.value })}
+                    placeholder="Nhập mật khẩu đang sử dụng..."
+                    style={{ paddingRight: '2.5rem', width: '100%' }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPwd(prev => !prev)}
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      padding: '0.25rem',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                    title={showOldPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    aria-label={showOldPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    tabIndex="-1"
+                  >
+                    {showOldPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                   Mật khẩu mới <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
-                <input
-                  type="password"
-                  className="input"
-                  value={pwdData.newPassword}
-                  onChange={(e) => setPwdData({ ...pwdData, newPassword: e.target.value })}
-                  placeholder="Ít nhất 6 ký tự..."
-                  required
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showNewPwd ? 'text' : 'password'}
+                    className="input"
+                    value={pwdData.newPassword}
+                    onChange={(e) => setPwdData({ ...pwdData, newPassword: e.target.value })}
+                    placeholder="Ít nhất 6 ký tự..."
+                    style={{ paddingRight: '2.5rem', width: '100%' }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPwd(prev => !prev)}
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      padding: '0.25rem',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                    title={showNewPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    aria-label={showNewPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    tabIndex="-1"
+                  >
+                    {showNewPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                   Xác nhận mật khẩu mới <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
-                <input
-                  type="password"
-                  className="input"
-                  value={pwdData.confirmPassword}
-                  onChange={(e) => setPwdData({ ...pwdData, confirmPassword: e.target.value })}
-                  placeholder="Nhập lại mật khẩu mới..."
-                  required
-                />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input
+                    type={showConfirmPwd ? 'text' : 'password'}
+                    className="input"
+                    value={pwdData.confirmPassword}
+                    onChange={(e) => setPwdData({ ...pwdData, confirmPassword: e.target.value })}
+                    placeholder="Nhập lại mật khẩu mới..."
+                    style={{ paddingRight: '2.5rem', width: '100%' }}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPwd(prev => !prev)}
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      padding: '0.25rem',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                    title={showConfirmPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    aria-label={showConfirmPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    tabIndex="-1"
+                  >
+                    {showConfirmPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
             </div>
 

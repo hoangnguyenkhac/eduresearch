@@ -17,6 +17,7 @@ import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import { useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -35,42 +36,44 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Auth Routes */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Route>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          {/* Auth Routes */}
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Route>
 
-        {/* Protected Dashboard Routes */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="surveys" element={<Surveys />} />
-          <Route path="responses" element={<Responses />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="clustering" element={<Clustering />} />
-          <Route path="documents" element={<Documents />} />
-          <Route path="users" element={<Users />} />
-          <Route path="profile" element={<Profile />} />
-        </Route>
-        
-        {/* Public Routes */}
-        <Route element={<PublicLayout />}>
-          <Route path="/survey" element={<PublicSurvey />} />
-          <Route path="/survey/:id" element={<PublicSurvey />} />
-        </Route>
-        
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Protected Dashboard Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="surveys" element={<Surveys />} />
+            <Route path="responses" element={<Responses />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="clustering" element={<Clustering />} />
+            <Route path="documents" element={<Documents />} />
+            <Route path="users" element={<Users />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
+          
+          {/* Public Routes */}
+          <Route element={<PublicLayout />}>
+            <Route path="/survey" element={<PublicSurvey />} />
+            <Route path="/survey/:id" element={<PublicSurvey />} />
+          </Route>
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

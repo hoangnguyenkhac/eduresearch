@@ -11,9 +11,17 @@ const getHeaders = () => {
   return headers;
 };
 
-// Generic fetch wrapper with AbortController timeout (L4)
+// Helper gửi request ping nhẹ để đánh thức backend Render từ trước
+export const pingServer = () => {
+  try {
+    const healthUrl = BASE_URL.replace(/\/api$/, '') + '/health';
+    fetch(healthUrl, { method: 'GET', mode: 'cors' }).catch(() => {});
+  } catch (_) {}
+};
+
+// Generic fetch wrapper with AbortController timeout (tăng lên 60s để chịu Render cold-start)
 const fetchAPI = async (endpoint, options = {}) => {
-  const timeoutMs = options.timeout || 15000; // 15 seconds default timeout
+  const timeoutMs = options.timeout || 60000; // 60s default timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -27,14 +35,23 @@ const fetchAPI = async (endpoint, options = {}) => {
       },
     });
 
-    const data = await response.json();
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (_) {
+      data = {};
+    }
+
     if (!response.ok) {
-      throw new Error(data.error || 'Đã có lỗi xảy ra');
+      if (response.status === 502 || response.status === 503 || response.status === 504) {
+        throw new Error('Máy chủ đang thức dậy sau thời gian nghỉ (Render cold-start). Xin vui lòng thử lại sau vài giây!');
+      }
+      throw new Error(data.error || `Yêu cầu thất bại (Mã lỗi: ${response.status})`);
     }
     return data;
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('Yêu cầu hết thời gian chờ (Request Timeout). Máy chủ đang phản hồi chậm.');
+      throw new Error('Máy chủ đang thức dậy từ trạng thái nghỉ (Render cold-start) và vượt quá thời gian chờ. Xin vui lòng bấm thử lại một lần nữa!');
     }
     throw err;
   } finally {
@@ -42,15 +59,15 @@ const fetchAPI = async (endpoint, options = {}) => {
   }
 };
 
-// Auth API
+// Auth API — gán timeout 75s cho login/register để đợi Render cold-start
 export const authAPI = {
-  login: (credentials) => fetchAPI('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
-  register: (data) => fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-  getMe: () => fetchAPI('/auth/me'),
+  login: (credentials) => fetchAPI('/auth/login', { method: 'POST', body: JSON.stringify(credentials), timeout: 75000 }),
+  register: (data) => fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify(data), timeout: 75000 }),
+  getMe: () => fetchAPI('/auth/me', { timeout: 60000 }),
   updateProfile: (data) => fetchAPI('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
   changePassword: (data) => fetchAPI('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
-  forgotPassword: (email) => fetchAPI('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
-  resetPassword: (data) => fetchAPI('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
+  forgotPassword: (email) => fetchAPI('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }), timeout: 75000 }),
+  resetPassword: (data) => fetchAPI('/auth/reset-password', { method: 'POST', body: JSON.stringify(data), timeout: 75000 }),
 };
 
 // Dashboard API

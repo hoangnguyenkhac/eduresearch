@@ -80,6 +80,15 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'EduResearch API is running' });
 });
 
+// Health check endpoints for Render keep-alive (UptimeRobot, cron) and frontend pre-warming
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/surveys', surveyRoutes);

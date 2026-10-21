@@ -1,5 +1,32 @@
 const db = require('../config/db');
 
+// Helper chuẩn hóa ngày lưu DB thành ISO string chuẩn PostgreSQL & SQLite
+function normalizeToIsoDate(val) {
+  if (!val) return new Date().toISOString();
+  if (typeof val === 'string') {
+    const dmyMatch = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmyMatch) {
+      const day = parseInt(dmyMatch[1], 10);
+      const month = parseInt(dmyMatch[2], 10) - 1;
+      const year = parseInt(dmyMatch[3], 10);
+      return new Date(Date.UTC(year, month, day, 12, 0, 0)).toISOString();
+    }
+    const parsed = new Date(val);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString();
+  return new Date().toISOString();
+}
+
+// Helper định dạng ngày hiển thị dd/mm/yyyy
+function formatDisplayDate(val) {
+  if (!val) return '';
+  if (typeof val === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 // Lấy danh sách phản hồi theo khảo sát và bộ lọc trường
 exports.getResponses = (req, res) => {
   const { surveyId, institution } = req.query;
@@ -32,7 +59,8 @@ exports.getResponses = (req, res) => {
       return {
         ...r,
         institution: r.institution || 'Cơ sở giáo dục đại học',
-        answers: parsedAnswers
+        answers: parsedAnswers,
+        date: formatDisplayDate(r.date)
       };
     });
 
@@ -103,14 +131,14 @@ exports.createResponse = (req, res) => {
     answers = {}
   } = req.body;
 
-  const now = new Date();
-  const date = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+  const isoDate = normalizeToIsoDate(req.body.date);
+  const displayDate = formatDisplayDate(isoDate);
   const answersJson = typeof answers === 'object' ? JSON.stringify(answers) : (answers || '{}');
 
   const sql = `INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  db.run(sql, [survey_id, role, unit, institution, gender, time_taken, status, answersJson, date], function(err) {
+  db.run(sql, [survey_id, role, unit, institution, gender, time_taken, status, answersJson, isoDate], function(err) {
     if (err) return res.status(500).json({ error: err.message });
 
     const newId = this.lastID;
@@ -127,7 +155,7 @@ exports.createResponse = (req, res) => {
       time_taken,
       status,
       answers: typeof answers === 'object' ? answers : {},
-      date
+      date: displayDate
     });
   });
 };
@@ -215,9 +243,6 @@ exports.importResponses = (req, res) => {
     return res.status(400).json({ error: 'Dữ liệu nhập không hợp lệ.' });
   }
 
-  const now = new Date();
-  const defaultDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-
   const stmt = db.prepare(`INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
@@ -230,7 +255,7 @@ exports.importResponses = (req, res) => {
     const time_taken = item.time_taken || '2p 30s';
     const status = item.status || 'valid';
     const answersJson = typeof item.answers === 'object' ? JSON.stringify(item.answers) : (item.answers || '{}');
-    const date = item.date || defaultDate;
+    const date = normalizeToIsoDate(item.date);
 
     stmt.run([survey_id, role, unit, institution, gender, time_taken, status, answersJson, date]);
     insertedCount++;

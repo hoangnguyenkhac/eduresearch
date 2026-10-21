@@ -173,8 +173,7 @@ if (usePostgres) {
   }
 
   function seedOfficialSurveys() {
-    const now = new Date();
-    const createdAt = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const createdAt = new Date().toISOString();
 
     OFFICIAL_SURVEYS.forEach((survey) => {
       sqliteDb.get(

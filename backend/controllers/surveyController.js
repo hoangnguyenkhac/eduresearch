@@ -177,8 +177,7 @@ exports.createSurvey = (req, res) => {
     : generateDefaultHypotheses(varsString);
 
   const questionsCount = initialQuestions.length;
-  const now = new Date();
-  const created_at = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+  const created_at = new Date().toISOString();
 
   const sql = `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at, audience, subtitle, institution)
                VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -344,8 +343,7 @@ exports.cloneSurvey = (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!original) return res.status(404).json({ error: 'Không tìm thấy khảo sát gốc để nhân bản.' });
 
-    const now = new Date();
-    const created_at = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const created_at = new Date().toISOString();
     const newTitle = `[Bản sao] ${original.title}`;
 
     const sql = `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at, audience, subtitle, institution)

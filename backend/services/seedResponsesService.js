@@ -248,7 +248,7 @@ function generateResponsesForSurvey(survey, count = 75) {
     const now = new Date();
     const dayOffset = Math.floor(Math.random() * 15);
     const d = new Date(now.getTime() - dayOffset * 24 * 60 * 60 * 1000);
-    const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    const dateStr = d.toISOString();
 
     responses.push({
       survey_id: survey.id,

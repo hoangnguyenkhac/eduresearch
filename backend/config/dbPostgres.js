@@ -20,6 +20,11 @@ pool.on('error', (err) => {
   console.error('[PG POOL ERROR]', err.message, err.stack);
 });
 
+// Thiết lập datestyle 'ISO, DMY' cho mỗi connection để tránh lỗi 'date/time field value out of range'
+pool.on('connect', (client) => {
+  client.query("SET datestyle TO 'ISO, DMY';").catch(() => {});
+});
+
 // Kiểm tra kết nối DB ngay khi khởi động và tự động đồng bộ schema trên Supabase
 if (process.env.DATABASE_URL) {
   pool.connect((err, client, release) => {

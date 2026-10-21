@@ -22,6 +22,15 @@ const Responses = () => {
   // Bulk Selection
   const [selectedIds, setSelectedIds] = useState([]);
 
+  // Helper hiển thị ngày tháng
+  const formatDisplayDate = (val) => {
+    if (!val) return '';
+    if (typeof val === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
   // Modals
   const [viewResponse, setViewResponse] = useState(null);
   const [showCleanModal, setShowCleanModal] = useState(false);
@@ -101,7 +110,7 @@ const Responses = () => {
       `"${r.gender}"`,
       `"${r.time_taken}"`,
       r.status === 'valid' ? 'Hợp lệ' : 'Không hợp lệ',
-      `"${r.date}"`
+      `"${formatDisplayDate(r.date)}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
@@ -598,7 +607,7 @@ const Responses = () => {
                         <td>{res.unit}</td>
                         <td>{res.gender}</td>
                         <td style={{ color: 'var(--text-muted)' }}>{res.time_taken}</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{res.date}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{formatDisplayDate(res.date)}</td>
                         <td>{getStatusBadge(res.status)}</td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -677,7 +686,7 @@ const Responses = () => {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Thời điểm nhận phiếu</div>
-                  <div style={{ fontWeight: '600' }}>{viewResponse.date}</div>
+                  <div style={{ fontWeight: '600' }}>{formatDisplayDate(viewResponse.date)}</div>
                 </div>
               </div>
 

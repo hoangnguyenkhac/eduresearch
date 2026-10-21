@@ -1,11 +1,24 @@
 const { query } = require('../config/db');
 const { uploadFile, deleteFile, getSignedUrl } = require('../config/supabase');
 
+// Helper định dạng ngày hiển thị dd/mm/yyyy
+function formatDisplayDate(val) {
+  if (!val) return '';
+  if (typeof val === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
 // Lấy danh sách tài liệu
 exports.getDocuments = async (req, res) => {
   try {
     const { rows } = await query(`SELECT * FROM documents ORDER BY created_at DESC`);
-    res.json(rows);
+    const formatted = rows.map(doc => ({
+      ...doc,
+      date: formatDisplayDate(doc.date)
+    }));
+    res.json(formatted);
   } catch (err) {
     console.error('[GET DOCUMENTS ERROR]', err);
     res.status(500).json({ error: 'Lỗi truy xuất danh sách tài liệu.' });
@@ -33,8 +46,8 @@ exports.createDocument = async (req, res) => {
     };
 
     const styling = typeConfig[type] || { color: '#3B82F6', bg: '#EFF6FF' };
-    const now = new Date();
-    const date = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const isoDate = new Date().toISOString();
+    const displayDate = formatDisplayDate(isoDate);
 
     // Upload file lên Supabase Storage
     const uploadResult = await uploadFile(req.file, { folder: 'documents' });
@@ -44,7 +57,7 @@ exports.createDocument = async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id
     `;
     const { rows } = await query(sql, [
-      title, sizeInMB, type, date, styling.color, styling.bg,
+      title, sizeInMB, type, isoDate, styling.color, styling.bg,
       uploadResult.path, req.file.originalname,
       uploadResult.path, uploadResult.bucket, req.file.mimetype, req.file.size
     ]);
@@ -54,7 +67,7 @@ exports.createDocument = async (req, res) => {
       title,
       size: sizeInMB,
       type,
-      date,
+      date: displayDate,
       color: styling.color,
       bg: styling.bg,
       file_path: uploadResult.path,

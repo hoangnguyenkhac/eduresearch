@@ -7,6 +7,14 @@ import { SkeletonCard } from '../components/Skeleton';
 
 let cachedDocuments = null;
 
+const formatDisplayDate = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return String(val);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};
+
 const Documents = () => {
   const { currentUser } = useAuth();
   const [documents, setDocuments] = useState(cachedDocuments || []);
@@ -216,7 +224,7 @@ const Documents = () => {
                 </span>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>{doc.date}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginRight: '0.25rem' }}>{formatDisplayDate(doc.date)}</span>
                   <button 
                     className="btn-outline"
                     style={{ padding: '0.375rem', borderRadius: 'var(--radius-md)', color: 'var(--primary)' }}

@@ -345,6 +345,11 @@ exports.deleteSurvey = (req, res) => {
   const { id } = req.params;
   db.run(`DELETE FROM responses WHERE survey_id = ?`, [id], (err) => {
     if (err) console.error('Lỗi xóa responses kèm theo:', err);
+    try {
+      const { syncResponsesSequence } = require('./responseController');
+      if (typeof syncResponsesSequence === 'function') syncResponsesSequence();
+    } catch (_) {}
+
     db.run(`DELETE FROM surveys WHERE id = ?`, [id], function(deleteErr) {
       if (deleteErr) return res.status(500).json({ error: deleteErr.message });
       if (this.changes === 0) return res.status(404).json({ error: 'Khảo sát không tồn tại.' });

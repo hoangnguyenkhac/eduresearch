@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Filter, MessageSquare, CheckCircle, XCircle, Trash2, Eye, X, ExternalLink, Sparkles, AlertTriangle, FileSpreadsheet, Building2, School } from 'lucide-react';
+import { Download, Upload, Filter, MessageSquare, CheckCircle, XCircle, Trash2, Eye, X, ExternalLink, Sparkles, AlertTriangle, FileSpreadsheet, Building2, School, Hash, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { responsesAPI, surveysAPI } from '../services/api';
@@ -187,6 +187,40 @@ const Responses = () => {
       await fetchResponses();
     } catch (err) {
       showToast(err.message || 'Lỗi xóa hàng loạt', 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  // Đánh số lại ID toàn bộ phản hồi từ #1 đến #N
+  const handleReindexIds = async () => {
+    if (bulkProcessing) return;
+    if (!window.confirm('Bạn có muốn đánh số lại toàn bộ ID của các phiếu phản hồi từ #1 đến #N theo thứ tự chuẩn không? Chuỗi ID mới tiếp theo cũng sẽ tự động tính từ N + 1.')) return;
+    try {
+      setBulkProcessing(true);
+      const res = await responsesAPI.reindexIds();
+      showToast(res?.message || 'Đã đánh số lại ID toàn bộ phản hồi thành công!');
+      await fetchResponses();
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi đánh số lại ID', 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  // Xóa toàn bộ phản hồi và khởi tạo chuỗi ID về 1
+  const handleClearAllResponses = async () => {
+    if (bulkProcessing) return;
+    const surveyLabel = selectedSurveyId && selectedSurveyId !== 'all' ? `của Khảo sát #${selectedSurveyId}` : 'toàn bộ hệ thống';
+    if (!window.confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA SẠCH tất cả phiếu phản hồi ${surveyLabel}? Chuỗi ID sẽ được khởi tạo lại về #1 cho các phiếu nộp mới sau này!`)) return;
+    try {
+      setBulkProcessing(true);
+      const res = await responsesAPI.clearAll(selectedSurveyId && selectedSurveyId !== 'all' ? selectedSurveyId : null);
+      showToast(res?.message || 'Đã xóa sạch dữ liệu và khởi tạo lại chuỗi ID về 1!');
+      setSelectedIds([]);
+      await fetchResponses();
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi xóa sạch phản hồi', 'error');
     } finally {
       setBulkProcessing(false);
     }
@@ -431,6 +465,33 @@ const Responses = () => {
             Phân tích 5 khâu APA 7
           </Link>
 
+          {/* NÚT ĐÁNH SỐ LẠI ID */}
+          {currentUser?.role !== 'viewer' && data.list.length > 0 && (
+            <button 
+              className="btn btn-outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#F8FAFC', borderColor: '#CBD5E1', color: '#334155', fontWeight: '600' }}
+              onClick={handleReindexIds}
+              disabled={bulkProcessing}
+              title="Đánh số lại toàn bộ ID từ #1 đến #N và reset chuỗi sinh mã tự động"
+            >
+              <Hash size={16} />
+              {bulkProcessing ? 'Đang xử lý...' : 'Đánh số lại ID (1...N)'}
+            </button>
+          )}
+
+          {/* NÚT ĐẶT LẠI DỮ LIỆU / XÓA SẠCH */}
+          {currentUser?.role !== 'viewer' && data.list.length > 0 && (
+            <button 
+              className="btn btn-outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', backgroundColor: '#FFF1F2', borderColor: '#FECDD3', color: '#BE123C', fontWeight: '600' }}
+              onClick={handleClearAllResponses}
+              disabled={bulkProcessing}
+              title="Xóa toàn bộ phản hồi và reset ID về 1 cho các phiếu mới"
+            >
+              <RotateCcw size={15} />
+              Xóa sạch (Reset về 1)
+            </button>
+          )}
 
           {/* NÚT NHẬP EXCEL / CSV */}
           {currentUser?.role !== 'viewer' && (

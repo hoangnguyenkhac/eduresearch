@@ -105,6 +105,8 @@ export const responsesAPI = {
   bulkDelete: (ids, surveyId) => fetchAPI('/responses/bulk-delete', { method: 'POST', body: JSON.stringify({ ids, surveyId }) }),
   bulkStatus: (ids, status) => fetchAPI('/responses/bulk-status', { method: 'POST', body: JSON.stringify({ ids, status }) }),
   delete: (id) => fetchAPI(`/responses/${id}`, { method: 'DELETE' }),
+  reindexIds: () => fetchAPI('/responses/reindex-ids', { method: 'POST' }),
+  clearAll: (surveyId) => fetchAPI('/responses/clear-all', { method: 'POST', body: JSON.stringify({ surveyId }) }),
 };
 
 // Documents API

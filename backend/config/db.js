@@ -149,6 +149,15 @@ if (usePostgres) {
       seedSqliteData();
       seedOfficialSurveys();
       sqliteDb.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)`, () => {});
+      sqliteDb.get(`SELECT COUNT(*) as cnt, MAX(id) as max_id FROM responses`, (err, row) => {
+        if (!err && row) {
+          if (row.cnt === 0) {
+            sqliteDb.run(`DELETE FROM sqlite_sequence WHERE name = 'responses'`, () => {});
+          } else {
+            sqliteDb.run(`UPDATE sqlite_sequence SET seq = ? WHERE name = 'responses'`, [row.max_id || 0], () => {});
+          }
+        }
+      });
     });
   }
 

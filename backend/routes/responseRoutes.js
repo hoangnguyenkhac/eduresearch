@@ -31,9 +31,12 @@ const { publicResponseLimiter, bulkOperationsLimiter } = require('../middlewares
 
 router.get('/', authenticateToken, responseController.getResponses);
 router.post('/', publicResponseLimiter, responseController.createResponse);
+router.post('/reindex-ids', authenticateToken, bulkOperationsLimiter, responseController.reindexResponses);
+router.post('/clear-all', authenticateToken, bulkOperationsLimiter, responseController.clearAllResponses);
 router.post('/import', authenticateToken, bulkOperationsLimiter, responseController.importResponses);
 router.post('/bulk-delete', authenticateToken, bulkOperationsLimiter, responseController.bulkDeleteResponses);
 router.post('/bulk-status', authenticateToken, bulkOperationsLimiter, responseController.bulkUpdateStatus);
 router.delete('/:id', authenticateToken, responseController.deleteResponse);
 
 module.exports = router;
+

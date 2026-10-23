@@ -199,6 +199,8 @@ exports.deleteResponse = (req, res) => {
       if (delErr) return res.status(500).json({ error: delErr.message });
       // Cập nhật lại responses_count chính xác cho survey
       db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE survey_id = ?) WHERE id = ?`, [surveyId, surveyId], () => {});
+      // Đồng bộ lại auto-increment sequence về MAX(id) hoặc 1 nếu trống
+      syncResponsesSequence();
       res.json({ message: 'Xóa phản hồi thành công.' });
     });
   });
@@ -226,6 +228,9 @@ exports.bulkDeleteResponses = (req, res) => {
     } else {
       db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)`, [], () => {});
     }
+
+    // Đồng bộ lại auto-increment sequence về MAX(id) hoặc 1 nếu trống
+    syncResponsesSequence();
 
     res.json({ message: `Đã xóa thành công ${deletedCount} phản hồi.`, deletedCount });
   });
@@ -335,3 +340,175 @@ exports.importResponses = async (req, res) => {
     res.status(500).json({ error: `Lỗi khi nhập dữ liệu: ${err.message}` });
   }
 };
+
+/**
+ * Đồng bộ hóa auto-increment sequence của bảng responses về MAX(id) hoặc 1
+ * Tương thích song song cả PostgreSQL (Render/Supabase) và SQLite
+ */
+function syncResponsesSequence(cb) {
+  const isPg = !!process.env.DATABASE_URL;
+  if (isPg) {
+    const pgSql = `
+      SELECT setval(
+        COALESCE(pg_get_serial_sequence('responses', 'id'), 'responses_id_seq'),
+        COALESCE((SELECT MAX(id) FROM responses), 1),
+        (SELECT COUNT(*) > 0 FROM responses)
+      );
+    `;
+    db.query(pgSql, [])
+      .then(res => cb && cb(null, res))
+      .catch(err => {
+        console.error('[SYNC RESPONSES SEQ ERROR PG]:', err.message);
+        cb && cb(err);
+      });
+  } else {
+    db.get('SELECT COUNT(*) as cnt, MAX(id) as max_id FROM responses', (err, row) => {
+      if (err) {
+        console.error('[SYNC RESPONSES SEQ ERROR SQLITE]:', err.message);
+        return cb && cb(err);
+      }
+      const cnt = row ? Number(row.cnt) : 0;
+      const maxId = row && row.max_id ? Number(row.max_id) : 0;
+      if (cnt === 0) {
+        db.run("DELETE FROM sqlite_sequence WHERE name = 'responses'", (delErr) => {
+          cb && cb(delErr);
+        });
+      } else {
+        db.run("UPDATE sqlite_sequence SET seq = ? WHERE name = 'responses'", [maxId], (updErr) => {
+          cb && cb(updErr);
+        });
+      }
+    });
+  }
+}
+
+/**
+ * Đánh số lại toàn bộ ID của bảng responses từ 1..N theo thứ tự chuẩn
+ * Và reset sequence về N (để phiếu mới tiếp theo sẽ nhận N + 1)
+ */
+function reindexResponseIds(cb) {
+  const isPg = !!process.env.DATABASE_URL;
+  if (isPg) {
+    const pgSql = `
+      DO $$
+      DECLARE
+        r_count integer;
+      BEGIN
+        SELECT COUNT(*) INTO r_count FROM responses;
+        IF r_count > 0 THEN
+          UPDATE responses SET id = id + 10000000;
+          WITH numbered AS (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY id ASC) as new_id
+            FROM responses
+          )
+          UPDATE responses
+          SET id = numbered.new_id
+          FROM numbered
+          WHERE responses.id = numbered.id;
+          
+          PERFORM setval(COALESCE(pg_get_serial_sequence('responses', 'id'), 'responses_id_seq'), r_count, true);
+        ELSE
+          PERFORM setval(COALESCE(pg_get_serial_sequence('responses', 'id'), 'responses_id_seq'), 1, false);
+        END IF;
+      END $$;
+    `;
+    db.query(pgSql, [])
+      .then(() => {
+        db.query(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)`, [])
+          .then(() => {
+            db.query('SELECT COUNT(*) as total FROM responses', [])
+              .then(res => cb(null, parseInt(res.rows[0]?.total || '0', 10)))
+              .catch(err => cb(err));
+          })
+          .catch(err => cb(err));
+      })
+      .catch(err => cb(err));
+  } else {
+    db.serialize(() => {
+      db.all('SELECT id FROM responses ORDER BY id ASC', (err, rows) => {
+        if (err) return cb(err);
+        if (!rows || rows.length === 0) {
+          db.run("DELETE FROM sqlite_sequence WHERE name = 'responses'", (delErr) => {
+            if (delErr) return cb(delErr);
+            cb(null, 0);
+          });
+          return;
+        }
+
+        const total = rows.length;
+        db.run('UPDATE responses SET id = id + 10000000', (shiftErr) => {
+          if (shiftErr) return cb(shiftErr);
+
+          let updated = 0;
+          let hasErr = null;
+          rows.forEach((r, idx) => {
+            const oldShiftedId = r.id + 10000000;
+            const newId = idx + 1;
+            db.run('UPDATE responses SET id = ? WHERE id = ?', [newId, oldShiftedId], (uErr) => {
+              if (uErr && !hasErr) hasErr = uErr;
+              updated++;
+              if (updated === total) {
+                if (hasErr) return cb(hasErr);
+                db.run("UPDATE sqlite_sequence SET seq = ? WHERE name = 'responses'", [total], (seqErr) => {
+                  if (seqErr) return cb(seqErr);
+                  db.run("UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)", (sErr) => {
+                    if (sErr) return cb(sErr);
+                    cb(null, total);
+                  });
+                });
+              }
+            });
+          });
+        });
+      });
+    });
+  }
+}
+
+// Endpoint: Đánh số lại ID (Reindex IDs 1..N)
+exports.reindexResponses = (req, res) => {
+  if (req.user && req.user.role === 'viewer') {
+    return res.status(403).json({ error: 'Người xem không có quyền đánh số lại ID.' });
+  }
+  reindexResponseIds((err, total) => {
+    if (err) return res.status(500).json({ error: `Lỗi đánh số lại ID: ${err.message}` });
+    res.json({
+      message: `Đã đánh số lại toàn bộ ${total} phiếu phản hồi liên tục từ 1 đến ${total} và khởi tạo lại chuỗi ID thành công.`,
+      total
+    });
+  });
+};
+
+// Endpoint: Xóa toàn bộ phản hồi và khởi tạo lại ID về 1
+exports.clearAllResponses = (req, res) => {
+  if (req.user && req.user.role === 'viewer') {
+    return res.status(403).json({ error: 'Người xem không có quyền xóa toàn bộ phản hồi.' });
+  }
+  const { surveyId } = req.body || {};
+  let delSql = 'DELETE FROM responses';
+  let params = [];
+  if (surveyId && surveyId !== 'all') {
+    delSql += ' WHERE survey_id = ?';
+    params.push(surveyId);
+  }
+
+  db.run(delSql, params, function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    const deletedCount = this.changes;
+
+    // Đồng bộ lại responses_count cho surveys
+    db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)`, [], () => {});
+
+    // Đồng bộ lại sequence về 1 nếu trống hoặc MAX(id)
+    syncResponsesSequence(() => {
+      res.json({
+        message: `Đã xóa sạch ${deletedCount} phản hồi và thiết lập lại chuỗi ID thành công.`,
+        deletedCount
+      });
+    });
+  });
+};
+
+exports.syncResponsesSequence = syncResponsesSequence;
+exports.reindexResponseIds = reindexResponseIds;
+

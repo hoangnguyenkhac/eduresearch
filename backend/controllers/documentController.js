@@ -13,7 +13,7 @@ function formatDisplayDate(val) {
 // Lấy danh sách tài liệu
 exports.getDocuments = async (req, res) => {
   try {
-    const { rows } = await query(`SELECT * FROM documents ORDER BY created_at DESC`);
+    const { rows } = await query(`SELECT * FROM documents ORDER BY date DESC`);
     const formatted = rows.map(doc => ({
       ...doc,
       date: formatDisplayDate(doc.date)

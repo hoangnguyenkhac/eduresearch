@@ -222,28 +222,33 @@ exports.importResponses = (req, res) => {
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
   let insertedCount = 0;
-  items.forEach(item => {
-    const role = item.role || 'Giảng viên';
-    const unit = item.unit || 'Khoa CNTT';
-    const institution = item.institution || 'Trường Đại học';
-    const gender = item.gender || 'Nam';
-    const time_taken = item.time_taken || '2p 30s';
-    const status = item.status || 'valid';
-    const answersJson = typeof item.answers === 'object' ? JSON.stringify(item.answers) : (item.answers || '{}');
-    const date = item.date || defaultDate;
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    items.forEach(item => {
+      const role = item.role || 'Người tham gia';
+      const unit = item.unit || 'Khoa / Đơn vị';
+      const institution = item.institution || 'Trường Đại học Lạc Hồng';
+      const gender = item.gender || 'Nam';
+      const time_taken = item.time_taken || '3 phút';
+      const status = item.status || 'valid';
+      const answersJson = typeof item.answers === 'object' ? JSON.stringify(item.answers) : (item.answers || '{}');
+      const date = item.date || defaultDate;
 
-    stmt.run([survey_id, role, unit, institution, gender, time_taken, status, answersJson, date]);
-    insertedCount++;
-  });
-
-  stmt.finalize((err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    // Cập nhật lại responses_count của survey
-    db.get(`SELECT COUNT(*) as cnt FROM responses WHERE survey_id = ?`, [survey_id], (cErr, cRow) => {
-      if (!cErr && cRow) {
-        db.run(`UPDATE surveys SET responses_count = ? WHERE id = ?`, [cRow.cnt, survey_id]);
-      }
+      stmt.run([survey_id, role, unit, institution, gender, time_taken, status, answersJson, date]);
+      insertedCount++;
     });
-    res.status(201).json({ message: `Nhập thành công ${insertedCount} phản hồi vào khảo sát #${survey_id}.`, count: insertedCount });
+
+    db.run('COMMIT', (commitErr) => {
+      stmt.finalize();
+      if (commitErr) return res.status(500).json({ error: commitErr.message });
+
+      // Cập nhật lại responses_count của survey
+      db.get(`SELECT COUNT(*) as cnt FROM responses WHERE survey_id = ?`, [survey_id], (cErr, cRow) => {
+        if (!cErr && cRow) {
+          db.run(`UPDATE surveys SET responses_count = ? WHERE id = ?`, [cRow.cnt, survey_id]);
+        }
+      });
+      res.status(201).json({ message: `Nhập thành công ${insertedCount} phản hồi vào khảo sát #${survey_id}.`, count: insertedCount });
+    });
   });
 };

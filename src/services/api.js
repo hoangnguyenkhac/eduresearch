@@ -21,9 +21,21 @@ const fetchAPI = async (endpoint, options = {}) => {
     },
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  let data;
+  if (contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: !response.ok ? `Lỗi máy chủ (${response.status}): ${text.slice(0, 150)}` : text };
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(data.error || 'Đã có lỗi xảy ra');
+    throw new Error(data.error || data.message || 'Đã có lỗi xảy ra');
   }
   return data;
 };

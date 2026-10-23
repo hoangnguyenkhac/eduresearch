@@ -266,36 +266,44 @@ function generateResponsesForSurvey(survey, count = 75) {
   return responses;
 }
 
-// Lưu responses vào database
+// Lưu responses vào database (tương thích cả SQLite và PostgreSQL)
 function seedSurveyResponsesInDB(surveyId, count = 75, callback) {
   db.get(`SELECT * FROM surveys WHERE id = ?`, [surveyId], (err, survey) => {
     if (err) return callback(err);
     if (!survey) return callback(new Error(`Không tìm thấy khảo sát ID ${surveyId}`));
 
     const responses = generateResponsesForSurvey(survey, count);
-    const stmt = db.prepare(`INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const insertSql = `INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.serialize(() => {
-      db.run('BEGIN TRANSACTION');
-      responses.forEach(r => {
-        stmt.run([r.survey_id, r.role, r.unit, r.institution, r.gender, r.time_taken, r.status, r.answers, r.date]);
-      });
-      db.run('COMMIT', (commitErr) => {
-        if (commitErr) return callback(commitErr);
-        stmt.finalize();
-        // Cập nhật responses_count
-        db.get(`SELECT COUNT(*) as cnt FROM responses WHERE survey_id = ?`, [surveyId], (cErr, cRow) => {
-          if (!cErr && cRow) {
-            db.run(`UPDATE surveys SET responses_count = ? WHERE id = ?`, [cRow.cnt, surveyId], () => {
-              callback(null, { count: responses.length, total: cRow.cnt });
-            });
-          } else {
-            callback(null, { count: responses.length });
-          }
+    let insertedCount = 0;
+
+    const updateSurveyCount = () => {
+      db.get(`SELECT COUNT(*) as cnt FROM responses WHERE survey_id = ?`, [surveyId], (cErr, cRow) => {
+        if (cErr || !cRow) {
+          return callback(null, { count: insertedCount });
+        }
+        db.run(`UPDATE surveys SET responses_count = ? WHERE id = ?`, [cRow.cnt, surveyId], () => {
+          callback(null, { count: insertedCount, total: cRow.cnt });
         });
       });
-    });
+    };
+
+    const insertNext = (index) => {
+      if (index >= responses.length) return updateSurveyCount();
+      const r = responses[index];
+      db.run(
+        insertSql,
+        [r.survey_id, r.role, r.unit, r.institution, r.gender, r.time_taken, r.status, r.answers, r.date],
+        (insertErr) => {
+          if (insertErr) return callback(insertErr);
+          insertedCount++;
+          insertNext(index + 1);
+        }
+      );
+    };
+
+    insertNext(0);
   });
 }
 

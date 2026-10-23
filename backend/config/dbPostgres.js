@@ -38,12 +38,13 @@ if (process.env.DATABASE_URL) {
         ALTER TABLE surveys ADD COLUMN IF NOT EXISTS subtitle TEXT;
         ALTER TABLE surveys ADD COLUMN IF NOT EXISTS institution TEXT DEFAULT 'Cơ sở giáo dục đại học';
         ALTER TABLE responses ADD COLUMN IF NOT EXISTS institution TEXT;
+        UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id);
       `, (migErr) => {
         release();
         if (migErr) {
           console.warn('[PG SCHEMA SYNC WARNING]:', migErr.message);
         } else {
-          console.log('✅ [PG SCHEMA SYNC]: Supabase tables up to date.');
+          console.log('✅ [PG SCHEMA & RESPONSES_COUNT SYNC]: Supabase tables and response counts up to date.');
         }
       });
     }

@@ -88,6 +88,7 @@ export const surveysAPI = {
   getAnalysis: (id, filterOutliers = true) => fetchAPI(`/surveys/${id}/analysis?filterOutliers=${filterOutliers}`),
   seedResponses: (id, count = 75) => fetchAPI(`/surveys/${id}/seed-responses`, { method: 'POST', body: JSON.stringify({ count }) }),
   seedAll: () => fetchAPI('/surveys/seed-all', { method: 'POST' }),
+  syncCounts: () => fetchAPI('/surveys/sync-counts', { method: 'POST' }),
 };
 
 // Responses API

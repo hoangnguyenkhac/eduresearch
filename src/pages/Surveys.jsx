@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Share2, Trash2, BarChart2, X, AlertTriangle, FileSpreadsheet, ListPlus, Sparkles, CheckCircle, QrCode, Copy, Eye, Download, Check, Building2, Users, GraduationCap, Briefcase, Filter } from 'lucide-react';
+import { Plus, Edit, Share2, Trash2, BarChart2, X, AlertTriangle, FileSpreadsheet, ListPlus, Sparkles, CheckCircle, QrCode, Copy, Eye, Download, Check, Building2, Users, GraduationCap, Briefcase, Filter, RefreshCw } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { useAuth } from '../context/AuthContext';
@@ -605,12 +605,34 @@ const Surveys = () => {
             Quản trị 4 bộ câu hỏi theo chức vụ, định danh theo trường/đơn vị và khai báo giả thuyết mô hình SEM
           </p>
         </div>
-        {currentUser?.role !== 'viewer' && (
-          <button className="btn btn-primary" onClick={handleOpenCreate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Plus size={18} />
-            Tạo bảng hỏi mới
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button 
+            type="button"
+            className="btn btn-outline" 
+            onClick={async () => {
+              try {
+                setLoading(true);
+                await surveysAPI.syncCounts();
+                await fetchSurveys();
+                showToast('Đã đồng bộ số lượng phản hồi theo thời gian thực!');
+              } catch {
+                await fetchSurveys();
+              }
+            }}
+            disabled={loading}
+            title="Đồng bộ lại số lượng phản hồi theo thời gian thực"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <span>Đồng bộ số liệu</span>
           </button>
-        )}
+          {currentUser?.role !== 'viewer' && (
+            <button className="btn btn-primary" onClick={handleOpenCreate} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Plus size={18} />
+              Tạo bảng hỏi mới
+            </button>
+          )}
+        </div>
       </div>
 
       {/* THANH BỘ LỌC ĐỊNH DANH THEO TRƯỜNG & CHỨC VỤ */}
@@ -747,9 +769,14 @@ const Surveys = () => {
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: '600', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '0.2rem', fontSize: '0.85rem' }}>
                         {survey.responses_count} / {survey.target}
                       </div>
+                      {survey.valid_responses_count !== undefined && survey.valid_responses_count < survey.responses_count && (
+                        <div style={{ fontSize: '0.7rem', color: '#059669', marginBottom: '0.25rem', fontWeight: '500' }}>
+                          ({survey.valid_responses_count} hợp lệ)
+                        </div>
+                      )}
                       <div style={{ width: '100px', height: '5px', backgroundColor: 'var(--bg-surface-hover)', borderRadius: '3px', overflow: 'hidden' }}>
                         <div 
                           style={{ 

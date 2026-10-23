@@ -181,7 +181,7 @@ const Responses = () => {
     if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedIds.length} phiếu đã chọn?`)) return;
     try {
       setBulkProcessing(true);
-      await responsesAPI.bulkDelete(selectedIds);
+      await responsesAPI.bulkDelete(selectedIds, selectedSurveyId && selectedSurveyId !== 'all' ? selectedSurveyId : null);
       showToast(`Đã xóa thành công ${selectedIds.length} phiếu phản hồi!`);
       setSelectedIds([]);
       await fetchResponses();
@@ -192,7 +192,7 @@ const Responses = () => {
     }
   };
 
-  // 1-Click loại trừ phiếu nghi vấn
+  // 1-Click loại trừ phiếu nghi vấn (Đánh dấu không hợp lệ)
   const handleExcludeSuspects = async () => {
     if (bulkProcessing) return;
     try {
@@ -208,6 +208,28 @@ const Responses = () => {
       await fetchResponses();
     } catch (err) {
       showToast(err.message || 'Lỗi khi loại trừ phiếu nghi vấn', 'error');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  // Xóa vĩnh viễn toàn bộ phiếu nghi vấn khỏi cơ sở dữ liệu
+  const handlePermanentDeleteSuspects = async () => {
+    if (bulkProcessing) return;
+    const suspectIds = suspectResponses.map(r => r.id);
+    if (suspectIds.length === 0) {
+      showToast('Không có phiếu lỗi nào cần xử lý!');
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn XÓA VĨNH VIỄN ${suspectIds.length} phiếu lỗi khỏi cơ sở dữ liệu?`)) return;
+    try {
+      setBulkProcessing(true);
+      await responsesAPI.bulkDelete(suspectIds, selectedSurveyId && selectedSurveyId !== 'all' ? selectedSurveyId : null);
+      showToast(`Đã xóa vĩnh viễn ${suspectIds.length} phiếu lỗi khỏi hệ thống!`);
+      setShowCleanModal(false);
+      await fetchResponses();
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi xóa phiếu lỗi', 'error');
     } finally {
       setBulkProcessing(false);
     }
@@ -910,20 +932,33 @@ const Responses = () => {
                 </div>
               )}
             </div>
-            <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+            <div className="modal-footer" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
               <button className="btn btn-outline" onClick={() => setShowCleanModal(false)}>
                 Đóng
               </button>
               {suspectResponses.length > 0 && currentUser?.role !== 'viewer' && (
-                <button 
-                  className="btn btn-primary"
-                  style={{ backgroundColor: '#DC2626', borderColor: '#DC2626' }}
-                  onClick={handleExcludeSuspects}
-                  disabled={bulkProcessing}
-                >
-                  <XCircle size={16} />
-                  {bulkProcessing ? 'Đang xử lý...' : `Loại trừ tất cả phiếu lỗi (${suspectResponses.length} phiếu)`}
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button 
+                    className="btn btn-outline"
+                    style={{ borderColor: '#F59E0B', color: '#D97706' }}
+                    onClick={handleExcludeSuspects}
+                    disabled={bulkProcessing}
+                    title="Chuyển trạng thái sang Không hợp lệ để loại khỏi phân tích thống kê"
+                  >
+                    <XCircle size={16} />
+                    {bulkProcessing ? 'Đang xử lý...' : `Đánh dấu Không hợp lệ (${suspectResponses.length})`}
+                  </button>
+                  <button 
+                    className="btn btn-primary"
+                    style={{ backgroundColor: '#DC2626', borderColor: '#DC2626' }}
+                    onClick={handlePermanentDeleteSuspects}
+                    disabled={bulkProcessing}
+                    title="Xóa hoàn toàn các dòng dữ liệu này khỏi cơ sở dữ liệu"
+                  >
+                    <Trash2 size={16} />
+                    {bulkProcessing ? 'Đang xóa...' : `Xóa vĩnh viễn (${suspectResponses.length})`}
+                  </button>
+                </div>
               )}
             </div>
           </div>

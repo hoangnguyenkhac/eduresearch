@@ -46,6 +46,7 @@ const { authenticateToken } = require('../middlewares/auth');
  *         description: Tạo khảo sát thành công
  */
 router.get('/', authenticateToken, surveyController.getSurveys);
+router.post('/sync-counts', authenticateToken, surveyController.syncSurveyCounts);
 router.post('/seed-all', authenticateToken, analysisController.seedAllSurveys);
 router.get('/:id/analysis', authenticateToken, analysisController.getSurveyAnalysis);
 router.post('/:id/seed-responses', authenticateToken, analysisController.seedSurveyResponses);

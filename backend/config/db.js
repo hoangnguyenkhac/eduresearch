@@ -148,6 +148,7 @@ if (usePostgres) {
 
       seedSqliteData();
       seedOfficialSurveys();
+      sqliteDb.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)`, () => {});
     });
   }
 

@@ -164,8 +164,8 @@ exports.createResponse = (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
 
       const newId = this.lastID;
-      // Tự động tăng responses_count của khảo sát tương ứng
-      db.run(`UPDATE surveys SET responses_count = responses_count + 1 WHERE id = ?`, [survey_id]);
+      // Tự động đồng bộ responses_count của khảo sát tương ứng
+      db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE survey_id = ?) WHERE id = ?`, [survey_id, survey_id], () => {});
 
       res.status(201).json({
         id: newId,
@@ -197,8 +197,8 @@ exports.deleteResponse = (req, res) => {
     const surveyId = row.survey_id;
     db.run(`DELETE FROM responses WHERE id = ?`, [id], function(delErr) {
       if (delErr) return res.status(500).json({ error: delErr.message });
-      // Giảm responses_count của survey
-      db.run(`UPDATE surveys SET responses_count = MAX(0, responses_count - 1) WHERE id = ?`, [surveyId]);
+      // Cập nhật lại responses_count chính xác cho survey
+      db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE survey_id = ?) WHERE id = ?`, [surveyId, surveyId], () => {});
       res.json({ message: 'Xóa phản hồi thành công.' });
     });
   });
@@ -220,13 +220,11 @@ exports.bulkDeleteResponses = (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     const deletedCount = this.changes;
 
-    // Cập nhật lại responses_count chính xác cho survey nếu có surveyId
+    // Cập nhật lại responses_count chính xác cho survey
     if (surveyId) {
-      db.get(`SELECT COUNT(*) as cnt FROM responses WHERE survey_id = ?`, [surveyId], (cErr, cRow) => {
-        if (!cErr && cRow) {
-          db.run(`UPDATE surveys SET responses_count = ? WHERE id = ?`, [cRow.cnt, surveyId]);
-        }
-      });
+      db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE survey_id = ?) WHERE id = ?`, [surveyId, surveyId], () => {});
+    } else {
+      db.run(`UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)`, [], () => {});
     }
 
     res.json({ message: `Đã xóa thành công ${deletedCount} phản hồi.`, deletedCount });

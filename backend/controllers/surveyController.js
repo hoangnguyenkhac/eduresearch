@@ -55,7 +55,14 @@ function generateDefaultHypotheses(variablesStr) {
 
 // Lấy tất cả khảo sát
 exports.getSurveys = (req, res) => {
-  db.all(`SELECT * FROM surveys ORDER BY id DESC`, [], (err, rows) => {
+  const sql = `
+    SELECT s.*, 
+      COALESCE((SELECT COUNT(*) FROM responses r WHERE r.survey_id = s.id), 0) AS responses_count,
+      COALESCE((SELECT COUNT(*) FROM responses r WHERE r.survey_id = s.id AND r.status = 'valid'), 0) AS valid_responses_count
+    FROM surveys s 
+    ORDER BY s.id DESC
+  `;
+  db.all(sql, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     const formatted = rows.map(r => {
       let questions = [];
@@ -75,6 +82,8 @@ exports.getSurveys = (req, res) => {
 
       return {
         ...r,
+        responses_count: parseInt(r.responses_count, 10) || 0,
+        valid_responses_count: parseInt(r.valid_responses_count, 10) || 0,
         variables: r.variables ? r.variables.split(',').map(v => v.trim()).filter(Boolean) : [],
         audience: r.audience || null,
         subtitle: r.subtitle || '',
@@ -91,7 +100,14 @@ exports.getSurveys = (req, res) => {
 // Lấy chi tiết khảo sát theo ID
 exports.getSurveyById = (req, res) => {
   const { id } = req.params;
-  db.get(`SELECT * FROM surveys WHERE id = ?`, [id], (err, row) => {
+  const sql = `
+    SELECT s.*, 
+      COALESCE((SELECT COUNT(*) FROM responses r WHERE r.survey_id = s.id), 0) AS responses_count,
+      COALESCE((SELECT COUNT(*) FROM responses r WHERE r.survey_id = s.id AND r.status = 'valid'), 0) AS valid_responses_count
+    FROM surveys s 
+    WHERE s.id = ?
+  `;
+  db.get(sql, [id], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'Không tìm thấy khảo sát' });
 
@@ -112,6 +128,8 @@ exports.getSurveyById = (req, res) => {
 
     res.json({
       ...row,
+      responses_count: parseInt(row.responses_count, 10) || 0,
+      valid_responses_count: parseInt(row.valid_responses_count, 10) || 0,
       variables: row.variables ? row.variables.split(',').map(v => v.trim()).filter(Boolean) : [],
       audience: row.audience || null,
       subtitle: row.subtitle || '',
@@ -400,5 +418,16 @@ exports.getPublicSurveys = (req, res) => {
   db.all(`SELECT id, title, subtitle, institution, audience, scale, status, questions_count FROM surveys WHERE status = 'Active' ORDER BY id ASC`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows || []);
+  });
+};
+
+// Đồng bộ số lượng phản hồi cho toàn bộ các khảo sát
+exports.syncSurveyCounts = (req, res) => {
+  db.run(`
+    UPDATE surveys 
+    SET responses_count = (SELECT COUNT(*) FROM responses WHERE responses.survey_id = surveys.id)
+  `, [], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Đã đồng bộ số lượng phản hồi của tất cả khảo sát thành công.' });
   });
 };

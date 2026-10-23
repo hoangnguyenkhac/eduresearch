@@ -7,13 +7,23 @@ exports.getDashboardData = (req, res) => {
     const surveyId = isSpecificSurvey ? parseInt(surveyIdParam) : null;
 
     // 1. Lấy danh sách toàn bộ các bảng hỏi khảo sát để phục vụ menu chọn nhanh
-    db.all(`SELECT id, title, target, responses_count, audience, scale, status FROM surveys ORDER BY id ASC`, [], (surveyListErr, surveysList) => {
+    const surveyListSql = `
+      SELECT s.id, s.title, s.target, 
+        COALESCE((SELECT COUNT(*) FROM responses r WHERE r.survey_id = s.id), 0) AS responses_count, 
+        s.audience, s.scale, s.status 
+      FROM surveys s 
+      ORDER BY s.id ASC
+    `;
+    db.all(surveyListSql, [], (surveyListErr, surveysList) => {
       if (surveyListErr) {
         console.error('[DASHBOARD ERROR] surveys query failed:', surveyListErr);
         return res.status(500).json({ error: 'Lỗi truy xuất danh sách khảo sát.' });
       }
 
-      const safeSurveysList = Array.isArray(surveysList) ? surveysList : [];
+      const safeSurveysList = (Array.isArray(surveysList) ? surveysList : []).map(s => ({
+        ...s,
+        responses_count: parseInt(s.responses_count, 10) || 0
+      }));
       const totalSurveys = safeSurveysList.length;
       const selectedSurvey = isSpecificSurvey ? safeSurveysList.find(s => s.id === surveyId) || null : null;
 

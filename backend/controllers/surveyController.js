@@ -124,7 +124,7 @@ exports.getSurveyById = (req, res) => {
 };
 
 // Tạo khảo sát mới (Hỗ trợ theo từng chức vụ & Định danh theo Trường/Đơn vị)
-exports.createSurvey = (req, res) => {
+exports.createSurvey = async (req, res) => {
   if (req.user && req.user.role === 'viewer') {
     return res.status(403).json({ error: 'Người xem không có quyền tạo khảo sát.' });
   }
@@ -180,25 +180,26 @@ exports.createSurvey = (req, res) => {
   const created_at = new Date().toISOString();
 
   const sql = `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at, audience, subtitle, institution)
-               VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`;
+               VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`;
 
-  db.run(sql, [
-    title,
-    questionsCount,
-    status,
-    scale,
-    parseInt(target) || 100,
-    varsString,
-    JSON.stringify(initialQuestions),
-    JSON.stringify(initialHypotheses),
-    created_at,
-    audience,
-    subtitle,
-    institution || 'Cơ sở giáo dục đại học'
-  ], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const { rows } = await db.query(sql, [
+      title,
+      questionsCount,
+      status,
+      scale,
+      parseInt(target) || 100,
+      varsString,
+      JSON.stringify(initialQuestions),
+      JSON.stringify(initialHypotheses),
+      created_at,
+      audience,
+      subtitle,
+      institution || 'Cơ sở giáo dục đại học'
+    ]);
+
     res.status(201).json({
-      id: this.lastID,
+      id: rows[0] ? rows[0].id : undefined,
       title,
       questions_count: questionsCount,
       status,
@@ -213,7 +214,9 @@ exports.createSurvey = (req, res) => {
       hypotheses: initialHypotheses,
       created_at
     });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // Cập nhật khảo sát
@@ -339,7 +342,7 @@ exports.cloneSurvey = (req, res) => {
   }
 
   const { id } = req.params;
-  db.get(`SELECT * FROM surveys WHERE id = ?`, [id], (err, original) => {
+  db.get(`SELECT * FROM surveys WHERE id = ?`, [id], async (err, original) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!original) return res.status(404).json({ error: 'Không tìm thấy khảo sát gốc để nhân bản.' });
 
@@ -347,22 +350,22 @@ exports.cloneSurvey = (req, res) => {
     const newTitle = `[Bản sao] ${original.title}`;
 
     const sql = `INSERT INTO surveys (title, questions_count, status, scale, responses_count, target, variables, questions, hypotheses, created_at, audience, subtitle, institution)
-                 VALUES (?, ?, 'Draft', ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`;
+                 VALUES ($1, $2, 'Draft', $3, 0, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`;
 
-    db.run(sql, [
-      newTitle,
-      original.questions_count,
-      original.scale,
-      original.target,
-      original.variables,
-      original.questions,
-      original.hypotheses,
-      created_at,
-      original.audience || null,
-      original.subtitle || '',
-      original.institution || 'Cơ sở giáo dục đại học'
-    ], function(insertErr) {
-      if (insertErr) return res.status(500).json({ error: insertErr.message });
+    try {
+      const { rows } = await db.query(sql, [
+        newTitle,
+        original.questions_count,
+        original.scale,
+        original.target,
+        original.variables,
+        original.questions,
+        original.hypotheses,
+        created_at,
+        original.audience || null,
+        original.subtitle || '',
+        original.institution || 'Cơ sở giáo dục đại học'
+      ]);
 
       let parsedQuestions = [];
       try { parsedQuestions = original.questions ? JSON.parse(original.questions) : []; } catch { parsedQuestions = []; }
@@ -371,7 +374,7 @@ exports.cloneSurvey = (req, res) => {
       try { parsedHypotheses = original.hypotheses ? JSON.parse(original.hypotheses) : []; } catch { parsedHypotheses = []; }
 
       res.status(201).json({
-        id: this.lastID,
+        id: rows[0] ? rows[0].id : undefined,
         title: newTitle,
         questions_count: original.questions_count,
         status: 'Draft',
@@ -386,7 +389,9 @@ exports.cloneSurvey = (req, res) => {
         hypotheses: parsedHypotheses,
         created_at
       });
-    });
+    } catch (insertErr) {
+      res.status(500).json({ error: insertErr.message });
+    }
   });
 };
 

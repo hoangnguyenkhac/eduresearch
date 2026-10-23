@@ -38,10 +38,10 @@ const isQualitative = (q) => (q.type === 'textarea' || q.type === 'text') && !is
 
 const PublicSurvey = () => {
   const { id } = useParams();
-  const surveyId = id || 1;
-
   const [surveyInfo, setSurveyInfo] = useState(null);
   const [questions, setQuestions] = useState(DEFAULT_QUESTIONS);
+  const [publicSurveysList, setPublicSurveysList] = useState([]);
+  const [notFoundError, setNotFoundError] = useState(null);
   const [fetching, setFetching] = useState(true);
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -60,37 +60,65 @@ const PublicSurvey = () => {
   const [answers, setAnswers] = useState({});
 
   useEffect(() => {
+    const setupSurveyData = (data) => {
+      setSurveyInfo(data);
+      setParticipant(prev => ({
+        ...prev,
+        institution: data.institution || 'Trường Đại học'
+      }));
+
+      if (data.questions && data.questions.length > 0) {
+        setQuestions(data.questions);
+        const initAnswers = {};
+        data.questions.forEach((q, idx) => {
+          const key = q.code || `q_${idx}`;
+          if (q.type === 'textarea' || q.type === 'text' || q.type === 'choice') {
+            initAnswers[key] = '';
+          }
+        });
+        setAnswers(initAnswers);
+      } else {
+        setQuestions(DEFAULT_QUESTIONS);
+      }
+    };
+
     const fetchSurvey = async () => {
       try {
         setFetching(true);
-        const data = await surveysAPI.getById(surveyId);
-        setSurveyInfo(data);
+        setNotFoundError(null);
 
-        setParticipant(prev => ({
-          ...prev,
-          institution: data.institution || 'Trường Đại học'
-        }));
-
-        if (data.questions && data.questions.length > 0) {
-          setQuestions(data.questions);
-          const initAnswers = {};
-          data.questions.forEach((q, idx) => {
-            const key = q.code || `q_${idx}`;
-            if (q.type === 'textarea' || q.type === 'text' || q.type === 'choice') {
-              initAnswers[key] = '';
+        // Trường hợp người dùng vào /survey (không có ID cụ thể)
+        if (!id) {
+          try {
+            const list = await surveysAPI.getPublicSurveys();
+            setPublicSurveysList(list || []);
+            if (list && list.length === 1) {
+              const fullSurvey = await surveysAPI.getById(list[0].id);
+              setupSurveyData(fullSurvey);
+            } else if (!list || list.length === 0) {
+              setNotFoundError('Hiện tại hệ thống chưa có đợt khảo sát nào đang mở.');
             }
-          });
-          setAnswers(initAnswers);
+          } catch (listErr) {
+            console.error('Error fetching public surveys:', listErr);
+            setNotFoundError('Không thể tải danh sách khảo sát đang mở. Vui lòng thử lại sau.');
+          }
+          return;
         }
+
+        // Trường hợp người dùng vào /survey/:id
+        const data = await surveysAPI.getById(id);
+        setupSurveyData(data);
       } catch (err) {
-        console.error('Survey not found, using default info', err);
-        setAnswers({ STR1: 4, LEA1: 5, CAP1: 4, RES1: 4, SER1: 5, REA1: 4 });
+        console.error('Survey not found:', err);
+        setNotFoundError(`Khảo sát mã #${id} không tồn tại hoặc đã bị gỡ bỏ khỏi hệ thống.`);
+        setSurveyInfo(null);
       } finally {
         setFetching(false);
       }
     };
+
     fetchSurvey();
-  }, [surveyId]);
+  }, [id]);
 
   const isPreview = new URLSearchParams(window.location.search).get('preview') === 'true';
 
@@ -184,6 +212,16 @@ const PublicSurvey = () => {
   };
 
   const handleSubmit = async () => {
+    // 1. Kiểm tra Likert còn câu nào chưa chọn điểm không
+    const missing = likertQuestions.find(q => {
+      const a = answers[q.code];
+      return a === undefined || a === null || a === '';
+    });
+    if (missing) {
+      alert(`Bạn chưa đánh giá cho câu hỏi [${missing.code}]. Vui lòng chọn điểm đánh giá đầy đủ trước khi nộp phiếu.`);
+      return;
+    }
+
     setLoading(true);
     try {
       if (isPreview) {
@@ -198,8 +236,13 @@ const PublicSurvey = () => {
       const seconds = elapsedSeconds % 60;
       const timeTakenStr = `${minutes}p ${seconds}s`;
 
+      const targetSurveyId = parseInt(surveyInfo?.id || id);
+      if (!targetSurveyId) {
+        throw new Error('Không xác định được mã khảo sát hợp lệ để nộp.');
+      }
+
       await responsesAPI.create({
-        survey_id: parseInt(surveyId) || 1,
+        survey_id: targetSurveyId,
         role: participant.role || 'Người tham gia',
         unit: participant.unit || 'Khoa / Đơn vị',
         institution: participant.institution || surveyInfo?.institution || 'Cơ sở giáo dục đại học',
@@ -213,7 +256,7 @@ const PublicSurvey = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Lỗi khi gửi phản hồi:', err);
-      alert('Đã có lỗi xảy ra khi nộp phiếu khảo sát. Vui lòng thử lại.');
+      alert(err.message || 'Đã có lỗi xảy ra khi nộp phiếu khảo sát. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -221,6 +264,91 @@ const PublicSurvey = () => {
 
   if (fetching) {
     return <SkeletonPublicSurvey />;
+  }
+
+  // Khảo sát không tồn tại hoặc lỗi tải
+  if (notFoundError) {
+    return (
+      <div style={{ animation: 'fadeIn 0.5s ease', textAlign: 'center', padding: '3rem 1rem' }}>
+        <div className="card" style={{ maxWidth: '560px', margin: '0 auto', padding: '3rem 2rem' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+            <AlertTriangle size={36} />
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.75rem', color: '#1E293B' }}>
+            Khảo sát không tồn tại hoặc đã bị gỡ bỏ
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: '1.6' }}>
+            {notFoundError}
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <Link to="/survey" className="btn btn-primary">
+              Xem các khảo sát đang mở
+            </Link>
+            <Link to="/" className="btn btn-outline">
+              Về trang chủ
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Người dùng vào /survey (không ID) và có nhiều khảo sát active: Hiển thị danh sách lựa chọn
+  if (!id && !surveyInfo && publicSurveysList.length > 0) {
+    return (
+      <div style={{ animation: 'fadeIn 0.5s ease', maxWidth: '840px', margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', backgroundColor: 'var(--primary)', color: 'white', borderRadius: '14px', marginBottom: '1rem' }}>
+            <School size={30} />
+          </div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1E293B' }}>
+            Cổng Khảo Sát Nghiên Cứu Giáo Dục
+          </h1>
+          <p style={{ color: 'var(--text-muted)', maxWidth: '560px', margin: '0 auto', fontSize: '0.95rem' }}>
+            Vui lòng chọn bảng hỏi khảo sát phù hợp với đơn vị, trường hoặc đối tượng công tác của bạn để bắt đầu đánh giá
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+          {publicSurveysList.map((s) => (
+            <div key={s.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1.5rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: '700', padding: '0.2rem 0.6rem', backgroundColor: '#EFF6FF', color: '#1D4ED8', borderRadius: '4px' }}>
+                    <Building2 size={13} />
+                    {s.institution || 'Cơ sở giáo dục đại học'}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#10B981', backgroundColor: '#ECFDF5', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                    Đang mở
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '700', marginBottom: '0.5rem', color: '#1E293B', lineHeight: '1.4' }}>
+                  {s.title}
+                </h3>
+                {s.subtitle && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: '1.5' }}>
+                    {s.subtitle}
+                  </p>
+                )}
+                <div style={{ fontSize: '0.75rem', color: '#64748B', display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <span>Thang đo: <strong>{s.scale || 'Likert 5'}</strong></span>
+                  <span>•</span>
+                  <span>Quy mô: <strong>{s.questions_count || 14} câu</strong></span>
+                </div>
+              </div>
+              <Link 
+                to={`/survey/${s.id}`} 
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%', padding: '0.65rem' }}
+              >
+                Bắt đầu tham gia khảo sát
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // Khảo sát đã đóng

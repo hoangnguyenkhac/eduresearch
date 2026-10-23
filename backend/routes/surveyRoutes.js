@@ -49,6 +49,7 @@ router.get('/', authenticateToken, surveyController.getSurveys);
 router.post('/seed-all', authenticateToken, analysisController.seedAllSurveys);
 router.get('/:id/analysis', authenticateToken, analysisController.getSurveyAnalysis);
 router.post('/:id/seed-responses', authenticateToken, analysisController.seedSurveyResponses);
+router.get('/public/all', surveyController.getPublicSurveys);
 router.get('/:id', surveyController.getSurveyById);
 router.post('/', authenticateToken, surveyController.createSurvey);
 router.put('/:id', authenticateToken, surveyController.updateSurvey);

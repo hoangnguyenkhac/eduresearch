@@ -78,6 +78,7 @@ export const dashboardAPI = {
 // Surveys API
 export const surveysAPI = {
   getAll: () => fetchAPI('/surveys'),
+  getPublicSurveys: () => fetchAPI('/surveys/public/all'),
   getById: (id) => fetchAPI(`/surveys/${id}`),
   create: (data) => fetchAPI('/surveys', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => fetchAPI(`/surveys/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

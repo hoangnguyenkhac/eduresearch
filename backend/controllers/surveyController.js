@@ -389,3 +389,11 @@ exports.cloneSurvey = (req, res) => {
     });
   });
 };
+
+// Lấy danh sách khảo sát công khai đang mở (Không yêu cầu đăng nhập)
+exports.getPublicSurveys = (req, res) => {
+  db.all(`SELECT id, title, subtitle, institution, audience, scale, status, questions_count FROM surveys WHERE status = 'Active' ORDER BY id ASC`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows || []);
+  });
+};

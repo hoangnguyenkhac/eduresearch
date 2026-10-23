@@ -538,7 +538,11 @@ const Responses = () => {
               <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', maxWidth: '420px' }}>
                 Khảo sát này chưa có phiếu trả lời nào. Bạn có thể mở biểu mẫu trực tuyến để điền thử nghiệm hoặc chia sẻ đường dẫn cho đối tượng nghiên cứu.
               </p>
-              <Link to="/survey/1" className="btn btn-primary" target="_blank">
+              <Link 
+                to={selectedSurveyId && selectedSurveyId !== 'all' ? `/survey/${selectedSurveyId}` : (surveys[0]?.id ? `/survey/${surveys[0].id}` : '/survey')} 
+                className="btn btn-primary" 
+                target="_blank"
+              >
                 <ExternalLink size={16} />
                 Mở khảo sát trực tuyến
               </Link>

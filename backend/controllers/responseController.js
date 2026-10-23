@@ -254,8 +254,17 @@ exports.bulkUpdateStatus = (req, res) => {
   });
 };
 
+// Chuẩn hóa trạng thái về đúng 2 giá trị mà DB cho phép (valid / invalid)
+function normalizeStatus(raw) {
+  const s = String(raw || '').trim().toLowerCase();
+  if (s === 'invalid' || s === 'không hợp lệ' || s === 'khong hop le' || s === 'không họp lệ') {
+    return 'invalid';
+  }
+  return 'valid';
+}
+
 // Import danh sách phản hồi từ Excel / CSV
-exports.importResponses = (req, res) => {
+exports.importResponses = async (req, res) => {
   if (req.user && req.user.role === 'viewer') {
     return res.status(403).json({ error: 'Người xem không có quyền nhập dữ liệu phản hồi.' });
   }
@@ -266,32 +275,65 @@ exports.importResponses = (req, res) => {
     return res.status(400).json({ error: 'Dữ liệu nhập không hợp lệ.' });
   }
 
-  const stmt = db.prepare(`INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  // Kiểm tra khảo sát đích có tồn tại (tránh lỗi khóa ngoại khi insert)
+  const survey = await new Promise((resolve, reject) => {
+    db.get(`SELECT id FROM surveys WHERE id = ?`, [survey_id], (err, row) => {
+      if (err) return reject(err);
+      resolve(row);
+    });
+  });
+
+  if (!survey) {
+    return res.status(404).json({ error: `Không tìm thấy khảo sát #${survey_id} để nhập dữ liệu.` });
+  }
+
+  const insertSql = `INSERT INTO responses (survey_id, role, unit, institution, gender, time_taken, status, answers, date)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
   let insertedCount = 0;
-  items.forEach(item => {
-    const role = item.role || 'Giảng viên';
-    const unit = item.unit || 'Khoa CNTT';
-    const institution = item.institution || 'Trường Đại học';
-    const gender = item.gender || 'Nam';
-    const time_taken = item.time_taken || '2p 30s';
-    const status = item.status || 'valid';
-    const answersJson = typeof item.answers === 'object' ? JSON.stringify(item.answers) : (item.answers || '{}');
-    const date = normalizeToIsoDate(item.date);
-
-    stmt.run([survey_id, role, unit, institution, gender, time_taken, status, answersJson, date]);
-    insertedCount++;
-  });
-
-  stmt.finalize((err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    // Cập nhật lại responses_count của survey
-    db.get(`SELECT COUNT(*) as cnt FROM responses WHERE survey_id = ?`, [survey_id], (cErr, cRow) => {
-      if (!cErr && cRow) {
-        db.run(`UPDATE surveys SET responses_count = ? WHERE id = ?`, [cRow.cnt, survey_id]);
+  try {
+    for (const item of items) {
+      const role = item.role || 'Giảng viên';
+      const unit = item.unit || 'Khoa CNTT';
+      const institution = item.institution || 'Trường Đại học';
+      const gender = item.gender || 'Nam';
+      const time_taken = item.time_taken || '2p 30s';
+      const status = normalizeStatus(item.status);
+      let answersJson = '{}';
+      if (typeof item.answers === 'object' && item.answers !== null) {
+        answersJson = JSON.stringify(item.answers);
+      } else if (typeof item.answers === 'string' && item.answers.trim()) {
+        answersJson = item.answers;
       }
+      const date = normalizeToIsoDate(item.date);
+
+      await new Promise((resolve, reject) => {
+        db.run(
+          insertSql,
+          [survey_id, role, unit, institution, gender, time_taken, status, answersJson, date],
+          function (err) {
+            if (err) return reject(err);
+            insertedCount++;
+            resolve();
+          }
+        );
+      });
+    }
+
+    // Cập nhật lại responses_count của survey
+    await new Promise((resolve) => {
+      db.run(
+        `UPDATE surveys SET responses_count = (SELECT COUNT(*) FROM responses WHERE survey_id = ?) WHERE id = ?`,
+        [survey_id, survey_id],
+        () => resolve()
+      );
     });
-    res.status(201).json({ message: `Nhập thành công ${insertedCount} phản hồi vào khảo sát #${survey_id}.`, count: insertedCount });
-  });
+
+    res.status(201).json({
+      message: `Nhập thành công ${insertedCount} phản hồi vào khảo sát #${survey_id}.`,
+      count: insertedCount
+    });
+  } catch (err) {
+    res.status(500).json({ error: `Lỗi khi nhập dữ liệu: ${err.message}` });
+  }
 };

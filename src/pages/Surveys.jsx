@@ -190,6 +190,8 @@ const Surveys = () => {
   const [newQuestionCode, setNewQuestionCode] = useState('');
   const [newQuestionVar, setNewQuestionVar] = useState('STR');
   const [newQuestionType, setNewQuestionType] = useState('likert');
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+  const [editingQuestionText, setEditingQuestionText] = useState('');
 
   // Form states cho Tạo mới / Chỉnh sửa
   const [selectedRoleTemplate, setSelectedRoleTemplate] = useState('leadership');
@@ -464,6 +466,19 @@ const Surveys = () => {
   const handleDeleteQuestion = (index) => {
     const updated = currentQuestions.filter((_, i) => i !== index);
     setCurrentQuestions(updated);
+  };
+
+  // Lưu chỉnh sửa câu hỏi trực tiếp
+  const handleSaveEditQuestion = (index) => {
+    if (!editingQuestionText.trim()) {
+      showToast('Nội dung câu hỏi không được để trống', 'error');
+      return;
+    }
+    const updated = [...currentQuestions];
+    updated[index] = { ...updated[index], text: editingQuestionText.trim() };
+    setCurrentQuestions(updated);
+    setEditingQuestionIndex(null);
+    showToast(`Đã cập nhật câu hỏi [${updated[index].code}]!`);
   };
 
   // Thêm giả thuyết nghiên cứu
@@ -1134,6 +1149,30 @@ const Surveys = () => {
                     onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
                   />
                 </div>
+
+                {/* LIÊN KẾT NHANH SANG THIẾT KẾ CÂU HỎI */}
+                <div style={{ padding: '0.875rem 1rem', backgroundColor: '#EEF2FF', borderRadius: '8px', border: '1px solid #C7D2FE', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '1.25rem' }}>
+                  <div>
+                    <div style={{ fontWeight: '700', fontSize: '0.875rem', color: '#1E3A8A', marginBottom: '0.2rem' }}>
+                      Nội dung câu hỏi ({formData.questions?.length || 0} câu) &amp; Giả thuyết ({formData.hypotheses?.length || 0})
+                    </div>
+                    <div style={{ fontSize: '0.775rem', color: '#4B5563' }}>
+                      Chỉnh sửa câu chữ, thêm/bớt câu hỏi hoặc khai báo các giả thuyết SEM cho bảng hỏi này
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline"
+                    style={{ backgroundColor: 'white', borderColor: '#93C5FD', color: 'var(--primary)', fontSize: '0.8rem', padding: '0.45rem 0.85rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    onClick={() => {
+                      setIsEditOpen(false);
+                      handleOpenQuestionBuilder(selectedSurvey);
+                    }}
+                  >
+                    <ListPlus size={16} />
+                    Chỉnh sửa câu hỏi
+                  </button>
+                </div>
               </div>
 
               <div className="modal-footer">
@@ -1348,16 +1387,68 @@ const Surveys = () => {
                                   {q.variable}
                                 </span>
                               )}
-                              <span style={{ fontSize: '0.875rem', color: 'var(--text-main)', flex: 1 }}>{q.text}</span>
+                              {editingQuestionIndex === idx ? (
+                                <div style={{ display: 'flex', gap: '0.5rem', flex: 1, alignItems: 'center' }}>
+                                  <input 
+                                    type="text" 
+                                    className="input" 
+                                    style={{ flex: 1, fontSize: '0.85rem', padding: '0.3rem 0.6rem' }}
+                                    value={editingQuestionText}
+                                    onChange={(e) => setEditingQuestionText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleSaveEditQuestion(idx);
+                                      } else if (e.key === 'Escape') {
+                                        setEditingQuestionIndex(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button 
+                                    type="button" 
+                                    className="btn btn-primary" 
+                                    style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                                    onClick={() => handleSaveEditQuestion(idx)}
+                                  >
+                                    Lưu
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    className="btn btn-outline" 
+                                    style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                                    onClick={() => setEditingQuestionIndex(null)}
+                                  >
+                                    Hủy
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '0.875rem', color: 'var(--text-main)', flex: 1 }}>{q.text}</span>
+                              )}
                             </div>
-                            <button 
-                              type="button" 
-                              style={{ color: 'var(--danger)', padding: '0.25rem', background: 'none' }}
-                              onClick={() => handleDeleteQuestion(idx)}
-                              title="Xóa câu hỏi này"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {editingQuestionIndex !== idx && (
+                              <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                <button 
+                                  type="button" 
+                                  style={{ color: 'var(--primary)', padding: '0.25rem', background: 'none', border: 'none', cursor: 'pointer' }}
+                                  onClick={() => {
+                                    setEditingQuestionIndex(idx);
+                                    setEditingQuestionText(q.text);
+                                  }}
+                                  title="Chỉnh sửa nội dung câu hỏi này"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button 
+                                  type="button" 
+                                  style={{ color: 'var(--danger)', padding: '0.25rem', background: 'none', border: 'none', cursor: 'pointer' }}
+                                  onClick={() => handleDeleteQuestion(idx)}
+                                  title="Xóa câu hỏi này"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

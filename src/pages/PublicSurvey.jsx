@@ -630,19 +630,7 @@ const PublicSurvey = () => {
                             key={opt.value}
                             type="button"
                             onClick={() => setAnswers({ ...answers, [qKey]: opt.value })}
-                            style={{
-                              padding: '0.75rem 0.25rem',
-                              borderRadius: 'var(--radius-md)',
-                              textAlign: 'center',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                              border: isChosen ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                              backgroundColor: isChosen ? 'var(--primary)' : 'white',
-                              color: isChosen ? 'white' : 'var(--text-main)',
-                              boxShadow: isChosen ? '0 2px 6px rgba(37,99,235,0.25)' : 'none',
-                              transition: 'all 0.15s ease',
-                              cursor: 'pointer'
-                            }}
+                            className={`likert-btn ${isChosen ? 'selected' : ''}`}
                           >
                             <div style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '0.25rem' }}>{opt.value}</div>
                             <div style={{ lineHeight: '1.3' }}>{opt.label}</div>

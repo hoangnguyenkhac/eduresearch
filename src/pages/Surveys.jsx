@@ -176,6 +176,7 @@ const Surveys = () => {
   const [isQuestionBuilderOpen, setIsQuestionBuilderOpen] = useState(false);
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // QR Code Modal State
   const [qrModalSurvey, setQrModalSurvey] = useState(null);
@@ -287,6 +288,7 @@ const Surveys = () => {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!formData.title.trim()) {
       showToast('Vui lòng nhập tiêu đề khảo sát', 'error');
       return;
@@ -296,12 +298,15 @@ const Surveys = () => {
       return;
     }
     try {
+      setIsSubmitting(true);
       const created = await surveysAPI.create(formData);
       setSurveys([created, ...surveys]);
       setIsCreateOpen(false);
       showToast(`Đã tạo thành công bộ khảo sát cho ${formData.institution}!`);
     } catch (err) {
       showToast(err.message || 'Lỗi khi tạo khảo sát', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -326,8 +331,9 @@ const Surveys = () => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedSurvey) return;
+    if (!selectedSurvey || isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const updated = await surveysAPI.update(selectedSurvey.id, formData);
       setSurveys(surveys.map(s => s.id === updated.id ? updated : s));
       setIsEditOpen(false);
@@ -335,6 +341,8 @@ const Surveys = () => {
       showToast('Cập nhật khảo sát thành công!');
     } catch (err) {
       showToast(err.message || 'Lỗi khi cập nhật khảo sát', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -390,13 +398,16 @@ const Surveys = () => {
 
   // Nhân bản khảo sát 1-Click
   const handleCloneSurvey = async (survey) => {
-    if (currentUser?.role === 'viewer') return;
+    if (currentUser?.role === 'viewer' || isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const cloned = await surveysAPI.clone(survey.id);
       setSurveys([cloned, ...surveys]);
       showToast(`Đã nhân bản thành công bảng hỏi: ${cloned.title}!`);
     } catch (err) {
       showToast(err.message || 'Lỗi khi nhân bản bảng hỏi', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -497,8 +508,9 @@ const Surveys = () => {
 
   // Lưu cấu hình câu hỏi và giả thuyết vào CSDL
   const handleSaveQuestionBuilder = async () => {
-    if (!selectedSurvey) return;
+    if (!selectedSurvey || isSubmitting) return;
     try {
+      setIsSubmitting(true);
       const updated = await surveysAPI.update(selectedSurvey.id, {
         questions: currentQuestions,
         questions_count: currentQuestions.length,
@@ -509,17 +521,23 @@ const Surveys = () => {
       showToast('Đã lưu thiết kế câu hỏi & giả thuyết nghiên cứu vào CSDL!');
     } catch (err) {
       showToast('Lỗi khi lưu bộ câu hỏi', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
+    if (isSubmitting) return;
     try {
+      setIsSubmitting(true);
       await surveysAPI.delete(id);
       setSurveys(surveys.filter(s => s.id !== id));
       setDeleteConfirmId(null);
       showToast('Đã xóa khảo sát thành công!');
     } catch (err) {
       showToast(err.message || 'Lỗi khi xóa khảo sát', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1028,11 +1046,11 @@ const Surveys = () => {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setIsCreateOpen(false)}>
+                <button type="button" className="btn btn-outline" onClick={() => setIsCreateOpen(false)} disabled={isSubmitting}>
                   Hủy bỏ
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Tạo khảo sát
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Đang tạo...' : 'Tạo khảo sát'}
                 </button>
               </div>
             </form>
@@ -1176,11 +1194,11 @@ const Surveys = () => {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline" onClick={() => setIsEditOpen(false)}>
+                <button type="button" className="btn btn-outline" onClick={() => setIsEditOpen(false)} disabled={isSubmitting}>
                   Hủy bỏ
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Lưu thay đổi
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
@@ -1212,28 +1230,18 @@ const Surveys = () => {
               </button>
             </div>
 
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', backgroundColor: '#F9FAFB', padding: '0 1.5rem' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', backgroundColor: '#F9FAFB', padding: '0 1rem' }}>
               <button
+                type="button"
                 onClick={() => setBuilderTab('questions')}
-                style={{
-                  padding: '0.75rem 1.25rem',
-                  fontWeight: builderTab === 'questions' ? '700' : '500',
-                  color: builderTab === 'questions' ? 'var(--primary)' : 'var(--text-muted)',
-                  borderBottom: builderTab === 'questions' ? '2px solid var(--primary)' : '2px solid transparent',
-                  background: 'none'
-                }}
+                className={`tab-btn ${builderTab === 'questions' ? 'active' : ''}`}
               >
                 1. Bộ câu hỏi nghiên cứu ({currentQuestions.length})
               </button>
               <button
+                type="button"
                 onClick={() => setBuilderTab('hypotheses')}
-                style={{
-                  padding: '0.75rem 1.25rem',
-                  fontWeight: builderTab === 'hypotheses' ? '700' : '500',
-                  color: builderTab === 'hypotheses' ? 'var(--primary)' : 'var(--text-muted)',
-                  borderBottom: builderTab === 'hypotheses' ? '2px solid var(--primary)' : '2px solid transparent',
-                  background: 'none'
-                }}
+                className={`tab-btn ${builderTab === 'hypotheses' ? 'active' : ''}`}
               >
                 2. Khai báo Giả thuyết SEM ({currentHypotheses.length})
               </button>
@@ -1537,11 +1545,11 @@ const Surveys = () => {
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn btn-outline" onClick={() => setIsQuestionBuilderOpen(false)}>
+              <button type="button" className="btn btn-outline" onClick={() => setIsQuestionBuilderOpen(false)} disabled={isSubmitting}>
                 Đóng
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleSaveQuestionBuilder}>
-                Lưu cấu hình câu hỏi &amp; giả thuyết
+              <button type="button" className="btn btn-primary" onClick={handleSaveQuestionBuilder} disabled={isSubmitting}>
+                {isSubmitting ? 'Đang lưu...' : 'Lưu cấu hình câu hỏi & giả thuyết'}
               </button>
             </div>
           </div>
@@ -1624,15 +1632,15 @@ const Surveys = () => {
               </p>
             </div>
             <div className="modal-footer" style={{ justifyContent: 'center' }}>
-              <button className="btn btn-outline" onClick={() => setDeleteConfirmId(null)}>
+              <button className="btn btn-outline" onClick={() => setDeleteConfirmId(null)} disabled={isSubmitting}>
                 Hủy bỏ
               </button>
               <button 
-                className="btn" 
-                style={{ backgroundColor: '#EF4444', color: 'white' }}
+                className="btn btn-danger" 
                 onClick={() => handleDelete(deleteConfirmId)}
+                disabled={isSubmitting}
               >
-                Đồng ý xóa
+                {isSubmitting ? 'Đang xóa...' : 'Đồng ý xóa'}
               </button>
             </div>
           </div>

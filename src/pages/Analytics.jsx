@@ -645,22 +645,13 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
           const Icon = stage.icon;
           const isActive = activeStage === stage.id;
           return (
-            <div 
+            <button 
               key={stage.id}
+              type="button"
               onClick={() => setActiveStage(stage.id)}
-              style={{
-                padding: '0.85rem 1rem',
-                backgroundColor: isActive ? '#1E40AF' : 'white',
-                color: isActive ? 'white' : 'var(--text-main)',
-                border: isActive ? '1px solid #1E40AF' : '1px solid #E2E8F0',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                transition: 'all 0.2s ease',
-                boxShadow: isActive ? '0 4px 10px rgba(30, 64, 175, 0.25)' : 'none'
-              }}
+              className={`stage-tab-card ${isActive ? 'active' : ''}`}
+              style={{ textAlign: 'left', width: '100%' }}
+              title={`Chuyển sang Khâu ${stage.id}: ${stage.title}`}
             >
               <div style={{
                 width: '36px',
@@ -679,11 +670,11 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                 <div style={{ fontSize: '0.85rem', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {stage.title}
                 </div>
-                <div style={{ fontSize: '0.725rem', color: isActive ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)' }}>
+                <div style={{ fontSize: '0.725rem', color: isActive ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
                   {stage.desc}
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1674,25 +1665,19 @@ ${(khau5_qualitative.quotesByRole?.students || []).slice(0, 2).map(q => `
                       { id: 'leadership', label: 'Ban Lãnh đạo' },
                       { id: 'faculty', label: 'Giảng viên & Cán bộ' },
                       { id: 'students', label: 'Sinh viên & Người học' },
-                    ].map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveQuoteTab(tab.id)}
-                        style={{
-                          border: 'none',
-                          padding: '0.35rem 0.75rem',
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          fontWeight: activeQuoteTab === tab.id ? 'bold' : 'normal',
-                          backgroundColor: activeQuoteTab === tab.id ? 'white' : 'transparent',
-                          color: activeQuoteTab === tab.id ? 'var(--primary)' : 'var(--text-muted)',
-                          boxShadow: activeQuoteTab === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
+                    ].map(tab => {
+                      const isCurrent = activeQuoteTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActiveQuoteTab(tab.id)}
+                          className={`subtab-btn ${isCurrent ? 'active' : ''}`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

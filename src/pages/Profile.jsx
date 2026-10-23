@@ -218,42 +218,20 @@ const Profile = () => {
       </div>
 
       {/* TABS ĐIỀU HƯỚNG */}
-      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
         <button
+          type="button"
           onClick={() => setActiveTab('info')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            border: 'none',
-            background: 'none',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'info' ? '700' : '500',
-            color: activeTab === 'info' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'info' ? '2px solid var(--primary)' : '2px solid transparent',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`}
         >
           <User size={18} />
           Thông tin cá nhân
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('password')}
-          style={{
-            padding: '0.75rem 1.25rem',
-            border: 'none',
-            background: 'none',
-            fontSize: '0.95rem',
-            fontWeight: activeTab === 'password' ? '700' : '500',
-            color: activeTab === 'password' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'password' ? '2px solid var(--primary)' : '2px solid transparent',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
+          className={`tab-btn ${activeTab === 'password' ? 'active' : ''}`}
         >
           <KeyRound size={18} />
           Đổi mật khẩu &amp; Bảo mật

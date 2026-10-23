@@ -42,6 +42,7 @@ const Responses = () => {
   const [importText, setImportText] = useState('');
   const [importing, setImporting] = useState(false);
   const [importSurveyId, setImportSurveyId] = useState('');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Toast
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -67,10 +68,10 @@ const Responses = () => {
   }, []);
 
   // Fetch responses when selected survey changes
-  const fetchResponses = async () => {
+  const fetchResponses = async (surveyId = selectedSurveyId) => {
     try {
       setLoading(true);
-      const result = await responsesAPI.getBySurvey(selectedSurveyId);
+      const result = await responsesAPI.getBySurvey(surveyId);
       setData(result);
     } catch (error) {
       console.error('Error fetching responses:', error);
@@ -161,33 +162,41 @@ const Responses = () => {
   };
 
   const handleBulkStatus = async (status) => {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0 || bulkProcessing) return;
     try {
+      setBulkProcessing(true);
       await responsesAPI.bulkStatus(selectedIds, status);
       showToast(`Đã cập nhật trạng thái ${selectedIds.length} phiếu thành "${status === 'valid' ? 'Hợp lệ' : 'Không hợp lệ'}"!`);
       setSelectedIds([]);
-      fetchResponses();
+      await fetchResponses();
     } catch (err) {
       showToast(err.message || 'Lỗi cập nhật hàng loạt', 'error');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
   const handleBulkDelete = async () => {
-    if (selectedIds.length === 0) return;
+    if (selectedIds.length === 0 || bulkProcessing) return;
     if (!window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedIds.length} phiếu đã chọn?`)) return;
     try {
+      setBulkProcessing(true);
       await responsesAPI.bulkDelete(selectedIds);
       showToast(`Đã xóa thành công ${selectedIds.length} phiếu phản hồi!`);
       setSelectedIds([]);
-      fetchResponses();
+      await fetchResponses();
     } catch (err) {
       showToast(err.message || 'Lỗi xóa hàng loạt', 'error');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
   // 1-Click loại trừ phiếu nghi vấn
   const handleExcludeSuspects = async () => {
+    if (bulkProcessing) return;
     try {
+      setBulkProcessing(true);
       const suspectIds = suspectResponses.map(r => r.id);
       if (suspectIds.length === 0) {
         showToast('Không có phiếu lỗi nào cần xử lý!');
@@ -196,9 +205,11 @@ const Responses = () => {
       await responsesAPI.bulkStatus(suspectIds, 'invalid');
       showToast(`Đã loại trừ ${suspectIds.length} phiếu nghi vấn (chuyển Không hợp lệ)!`);
       setShowCleanModal(false);
-      fetchResponses();
+      await fetchResponses();
     } catch (err) {
       showToast(err.message || 'Lỗi khi loại trừ phiếu nghi vấn', 'error');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -290,14 +301,22 @@ const Responses = () => {
     try {
       setImporting(true);
       const res = await responsesAPI.import(targetSurveyId, parsedImportData);
-      showToast(res?.message || `Đã nhập thành công ${parsedImportData.length} phiếu phản hồi vào hệ thống!`);
+      const importedCount = res?.count ?? parsedImportData.length;
+
+      // Đóng popup và xóa dữ liệu tạm ngay khi nhập thành công
       setShowImportModal(false);
       setParsedImportData([]);
       setImportText('');
-      if (selectedSurveyId === targetSurveyId || !selectedSurveyId || selectedSurveyId === 'all') {
-        fetchResponses();
+      showToast(res?.message || `Đã nhập thành công ${importedCount} phiếu phản hồi vào hệ thống!`);
+
+      // Cập nhật lại danh sách phản hồi ngay sau khi thêm
+      const targetIdStr = String(targetSurveyId);
+      if (!selectedSurveyId || selectedSurveyId === 'all') {
+        await fetchResponses(selectedSurveyId);
+      } else if (selectedSurveyId !== targetIdStr) {
+        setSelectedSurveyId(targetIdStr);
       } else {
-        setSelectedSurveyId(targetSurveyId);
+        await fetchResponses(targetIdStr);
       }
     } catch (err) {
       showToast(err.message || 'Lỗi khi nhập dữ liệu', 'error');
@@ -578,23 +597,26 @@ const Responses = () => {
                       className="btn btn-outline"
                       style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#A7F3D0' }}
                       onClick={() => handleBulkStatus('valid')}
+                      disabled={bulkProcessing}
                     >
-                      <CheckCircle size={14} /> Đánh dấu Hợp lệ
+                      <CheckCircle size={14} /> {bulkProcessing ? 'Đang lưu...' : 'Đánh dấu Hợp lệ'}
                     </button>
                     <button 
                       className="btn btn-outline"
                       style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#FDE68A' }}
                       onClick={() => handleBulkStatus('invalid')}
+                      disabled={bulkProcessing}
                     >
-                      <XCircle size={14} /> Đánh dấu Nghi vấn / Loại trừ
+                      <XCircle size={14} /> {bulkProcessing ? 'Đang lưu...' : 'Đánh dấu Nghi vấn / Loại trừ'}
                     </button>
                     {currentUser?.role !== 'viewer' && (
                       <button 
                         className="btn btn-outline"
                         style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', backgroundColor: '#FEE2E2', color: '#991B1B', borderColor: '#FECACA' }}
                         onClick={handleBulkDelete}
+                        disabled={bulkProcessing}
                       >
-                        <Trash2 size={14} /> Xóa {selectedIds.length} phiếu
+                        <Trash2 size={14} /> {bulkProcessing ? 'Đang xóa...' : `Xóa ${selectedIds.length} phiếu`}
                       </button>
                     )}
                   </div>
@@ -897,9 +919,10 @@ const Responses = () => {
                   className="btn btn-primary"
                   style={{ backgroundColor: '#DC2626', borderColor: '#DC2626' }}
                   onClick={handleExcludeSuspects}
+                  disabled={bulkProcessing}
                 >
                   <XCircle size={16} />
-                  Loại trừ tất cả phiếu lỗi ({suspectResponses.length} phiếu)
+                  {bulkProcessing ? 'Đang xử lý...' : `Loại trừ tất cả phiếu lỗi (${suspectResponses.length} phiếu)`}
                 </button>
               )}
             </div>

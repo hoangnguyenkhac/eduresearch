@@ -49,14 +49,6 @@ const Sidebar = () => {
                   <NavLink 
                     to={item.path} 
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                    style={({ isActive }) => ({
-                      display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 'var(--radius-md)',
-                      color: isActive ? 'var(--primary)' : 'var(--text-main)',
-                      backgroundColor: isActive ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                      fontWeight: isActive ? '600' : '500',
-                      textDecoration: 'none',
-                      transition: 'all 0.2s'
-                    })}
                   >
                     {item.icon}
                     <span>{item.name}</span>
@@ -73,14 +65,6 @@ const Sidebar = () => {
                   <NavLink 
                     to={item.path} 
                     className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                    style={({ isActive }) => ({
-                      display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 'var(--radius-md)',
-                      color: isActive ? 'var(--primary)' : 'var(--text-main)',
-                      backgroundColor: isActive ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                      fontWeight: isActive ? '600' : '500',
-                      textDecoration: 'none',
-                      transition: 'all 0.2s'
-                    })}
                   >
                     {item.icon}
                     <span>{item.name}</span>
@@ -93,14 +77,6 @@ const Sidebar = () => {
               key={item.path}
               to={item.path} 
               className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-              style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', borderRadius: 'var(--radius-md)',
-                color: isActive ? 'var(--primary)' : 'var(--text-main)',
-                backgroundColor: isActive ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
-                fontWeight: isActive ? '600' : '500',
-                textDecoration: 'none',
-                transition: 'all 0.2s'
-              })}
             >
               {item.icon}
               <span>{item.name}</span>
@@ -126,7 +102,8 @@ const Sidebar = () => {
         </NavLink>
         <button 
           onClick={logout}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.5rem', backgroundColor: '#FEE2E2', color: '#EF4444', borderRadius: 'var(--radius-md)', fontWeight: '500', cursor: 'pointer', border: 'none' }}
+          className="btn btn-danger-soft"
+          style={{ width: '100%' }}
         >
           <LogOut size={16} />
           Đăng xuất

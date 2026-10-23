@@ -52,6 +52,8 @@ button {
   border: none;
   background: none;
   font-family: inherit;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Utilities */
@@ -89,29 +91,288 @@ button {
   transform: translateY(-2px);
 }
 
+/* Button Base with Tactile Active & Hover States */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-md);
-  font-weight: 500;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.btn:active,
+button:active:not(:disabled) {
+  transform: scale(0.96) !important;
+  filter: brightness(0.96);
+  transition: transform 0.08s ease;
+}
+
+/* Anti-spam & Disabled States for all buttons */
+button:disabled,
+button[disabled],
+.btn:disabled,
+.btn[disabled],
+.btn-disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(0.2) !important;
 }
 
 .btn-primary {
   background-color: var(--primary);
   color: white;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
 }
-.btn-primary:hover { background-color: var(--primary-hover); }
+.btn-primary:hover { 
+  background-color: var(--primary-hover);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
 
 .btn-outline {
   border: 1px solid var(--border-color);
   background-color: transparent;
   color: var(--text-main);
 }
-.btn-outline:hover { background-color: var(--bg-surface-hover); }
+.btn-outline:hover { 
+  background-color: var(--bg-surface-hover);
+  border-color: #CBD5E1;
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+}
+.btn-danger:hover {
+  background-color: var(--danger-hover);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+}
+
+/* Tab Navigation Buttons */
+.tab-btn {
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  user-select: none;
+}
+
+.tab-btn:hover {
+  color: var(--primary);
+  background-color: rgba(79, 70, 229, 0.06);
+}
+
+.tab-btn:active {
+  transform: scale(0.97);
+}
+
+.tab-btn.active {
+  font-weight: 700;
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+  background-color: rgba(79, 70, 229, 0.08);
+}
+
+/* Stage Progress Pipeline Tabs (Analytics) */
+.stage-tab-card {
+  padding: 0.85rem 1rem;
+  background-color: white;
+  color: var(--text-main);
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.stage-tab-card:hover {
+  border-color: #93C5FD;
+  background-color: #F8FAFC;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.stage-tab-card:active {
+  transform: translateY(0) scale(0.97) !important;
+}
+
+.stage-tab-card.active {
+  background-color: #1E40AF;
+  color: white;
+  border-color: #1E40AF;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+  transform: translateY(-1px);
+}
+
+.stage-tab-card.active:hover {
+  background-color: #1D4ED8;
+  border-color: #1D4ED8;
+}
+
+/* Action Icon Buttons (in tables, cards) */
+.action-icon-btn {
+  padding: 0.35rem 0.45rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.action-icon-btn:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-main);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.action-icon-btn:active {
+  transform: scale(0.90) !important;
+}
+
+/* Rating Likert Button (PublicSurvey) */
+.likert-btn {
+  padding: 0.75rem 0.25rem;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  color: var(--text-main);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.likert-btn:hover {
+  border-color: #93C5FD;
+  background-color: #EFF6FF;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
+}
+
+.likert-btn:active {
+  transform: scale(0.94) !important;
+}
+
+.likert-btn.selected {
+  border: 2px solid var(--primary);
+  background-color: var(--primary);
+  color: white;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Subtabs / Pill Tabs (Filters, Roles) */
+.subtab-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.subtab-btn:hover {
+  color: var(--primary);
+  background-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.subtab-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.subtab-btn.active {
+  font-weight: 700;
+  background-color: white;
+  color: var(--primary);
+  border-color: #C7D2FE;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Sidebar Navigation Links */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  background-color: transparent;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.sidebar-link:hover {
+  background-color: rgba(79, 70, 229, 0.08);
+  color: var(--primary);
+  transform: translateX(3px);
+}
+
+.sidebar-link:active {
+  transform: translateX(1px) scale(0.98);
+}
+
+.sidebar-link.active {
+  color: var(--primary);
+  background-color: rgba(79, 70, 229, 0.12);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 0 var(--primary);
+}
+
+/* Soft danger button */
+.btn-danger-soft {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.btn-danger-soft:hover {
+  background-color: #FECACA;
+  color: #B91C1C;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+}
 
 .badge {
   display: inline-flex;
